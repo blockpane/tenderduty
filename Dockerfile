@@ -28,7 +28,6 @@ COPY --from=ssl --chown=tenderduty:tenderduty /var/lib/tenderduty /var/lib/tende
 
 COPY --from=builder /build/app/tenderduty /bin/tenderduty
 
-EXPOSE 8080
 USER tenderduty
 WORKDIR /var/lib/tenderduty
 
