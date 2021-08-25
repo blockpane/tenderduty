@@ -1,13 +1,15 @@
 # TenderDuty
 
-A PagerDuty notifier for Cosmos/Tendermint validators.
+A [PagerDuty](https://github.com/PagerDuty/go-pagerduty) notifier for [Cosmos](https://github.com/cosmos/cosmos-sdk) / [Tendermint](https://github.com/tendermint/tendermint) validators.
+
+This will probably only work on Tendermint 0.34.x chains.
 
 Features:
 
 * Will send an alert if a certain threshold of missed pre-commits are seen.
 * Alerts if the validator leaves the active set.
 * Will resolve the alert once the validator is signing again.
-* Accepts a list of RPC endpoints and randomly connects to one.
+* Accepts a list of Tendermint RPC endpoints and randomly connects to one (_does not need to run on the validator node._)
 
 Install:
 
