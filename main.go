@@ -59,7 +59,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		time.Sleep(10*time.Second)
+		time.Sleep(10 * time.Second)
 		log.Println("Sending resolve event")
 		err = notifyPagerduty(true, "RESOLVED cosmopager test event", consAddr, pagerDuty)
 		if err != nil {
@@ -71,14 +71,14 @@ func main() {
 	notifications := make(chan string)
 	go func() {
 		for {
-			func(){
+			func() {
 				client, err := connect(rpcs)
 				if err != nil {
 					return
 				}
 				watchCommits(client, consAddr, notifications)
 			}()
-			time.Sleep(3*time.Second)
+			time.Sleep(3 * time.Second)
 			log.Println("attempting to reconnect")
 		}
 	}()
@@ -105,10 +105,10 @@ func notifyPagerduty(resolved bool, message, producer, key string) (err error) {
 		RoutingKey: key,
 		Action:     action,
 		DedupKey:   producer,
-		Payload:    &pagerduty.V2Payload{
-			Summary:   message,
-			Source:    producer,
-			Severity:  sev,
+		Payload: &pagerduty.V2Payload{
+			Summary:  message,
+			Source:   producer,
+			Severity: sev,
 		},
 	})
 	return
@@ -191,7 +191,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	}
 
 	// watchdog ticker
-	alive := time.NewTicker(4*time.Minute)
+	alive := time.NewTicker(4 * time.Minute)
 
 	var currentBlock, aliveBlock int64
 	var missingCount int
@@ -217,11 +217,11 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 			for _, sig := range block.Block.LastCommit.Signatures {
 				if sig.ValidatorAddress.String() == myValidator.Address.String() {
 					if missingCount >= alertThreshold {
-						notifications <- "RESOLVED validator is signing blocks on "+network
+						notifications <- "RESOLVED validator is signing blocks on " + network
 					}
 					missingCount = 0
 					missed = false
-					if currentBlock % 30 == 0 {
+					if currentBlock%30 == 0 {
 						l.Println("block", currentBlock)
 					}
 					break
@@ -229,7 +229,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 			}
 			if missed {
 				missingCount += 1
-				if missingCount == alertThreshold || missingCount % alertReminder == 0 {
+				if missingCount == alertThreshold || missingCount%alertReminder == 0 {
 					notifications <- fmt.Sprintf("ALERT validator has missed %d blocks on %s", missingCount, network)
 				}
 				l.Println("missed a precommit at height:", currentBlock)
@@ -249,10 +249,10 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 				}
 			}
 			if !isActive && wasActive {
-				notifications <- "ALERT validator is not in the active set on "+network
+				notifications <- "ALERT validator is not in the active set on " + network
 			}
 			if isActive && !wasActive {
-				notifications <- "RESOLVED validator is now in the active set on "+network
+				notifications <- "RESOLVED validator is now in the active set on " + network
 			}
 
 		case <-alive.C:
@@ -275,4 +275,3 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 		}
 	}
 }
-
