@@ -55,13 +55,13 @@ func main() {
 
 	if testPD {
 		log.Println("Sending trigger event")
-		err := notifyPagerduty(false, "ALERT cosmopager test event", consAddr, pagerDuty)
+		err := notifyPagerduty(false, "ALERT tenderduty test event", consAddr, pagerDuty)
 		if err != nil {
 			log.Fatal(err)
 		}
 		time.Sleep(10 * time.Second)
 		log.Println("Sending resolve event")
-		err = notifyPagerduty(true, "RESOLVED cosmopager test event", consAddr, pagerDuty)
+		err = notifyPagerduty(true, "RESOLVED tenderduty test event", consAddr, pagerDuty)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -184,7 +184,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	}
 
 	query = "tm.event = 'ValidatorSetUpdates'"
-	valUpdates, e := client.Subscribe(ctx, "validator-client", query)
+	valUpdates, err := client.Subscribe(ctx, "validator-client", query)
 	if err != nil {
 		l.Println("could not subscribe to validator events on ws", err)
 		return
@@ -262,10 +262,10 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 			}
 			aliveBlock = currentBlock
 			cx, cn := context.WithTimeout(context.Background(), 2*time.Second)
-			status, e = client.Status(cx)
+			status, err = client.Status(cx)
 			cn()
-			if e != nil {
-				l.Println("could not check sync status", e)
+			if err != nil {
+				l.Println("could not check sync status", err)
 				return
 			}
 			if status.SyncInfo.CatchingUp {
