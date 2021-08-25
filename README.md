@@ -9,6 +9,14 @@ Features:
 * Will resolve the alert once the validator is signing again.
 * Accepts a list of RPC endpoints and randomly connects to one.
 
+Install:
+
+```shell
+$ git clone https://github.com/blockpane/tenderduty.git
+$ cd tenderduty
+$ go build -ldflags "-s -w" -o tenderduty main.go
+```
+
 Options:
 
 ```
