@@ -147,6 +147,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	}
 	network := status.NodeInfo.Network
 	log.Println("connected to", network)
+	l := log.New(os.Stdout, fmt.Sprintf("%-12s | ", network), log.LstdFlags|log.Lshortfile)
 
 	var isActive bool
 
@@ -154,7 +155,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	page, perPage := 1, 500
 	valSet, err := client.Validators(ctx, &status.SyncInfo.LatestBlockHeight, &page, &perPage)
 	if err != nil {
-		log.Println("could not get current validator set", err)
+		l.Println("could not get current validator set", err)
 		return
 	}
 
@@ -163,13 +164,13 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 		if bytes.Equal(valSet.Validators[i].Address.Bytes(), consPubBytes) {
 			myValidator = valSet.Validators[i]
 			isActive = true
-			log.Printf("found %s in the active validator set.", consAddr)
+			l.Printf("found %s in the active validator set.", consAddr)
 			break
 		}
 	}
 
 	if myValidator == nil {
-		log.Printf("could not find %s in current validator set, disconnecting and will retry in 1 minute", consAddr)
+		l.Printf("could not find %s in current validator set, disconnecting and will retry in 1 minute", consAddr)
 		_ = client.Stop()
 		time.Sleep(time.Minute)
 		return
@@ -178,14 +179,14 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	query := "tm.event = 'NewBlock'"
 	blockEvent, err := client.Subscribe(ctx, "block-client", query)
 	if err != nil {
-		log.Println("could not subscribe to block events on ws", err)
+		l.Println("could not subscribe to block events on ws", err)
 		return
 	}
 
 	query = "tm.event = 'ValidatorSetUpdates'"
 	valUpdates, e := client.Subscribe(ctx, "validator-client", query)
 	if err != nil {
-		log.Println("could not subscribe to validator events on ws", err)
+		l.Println("could not subscribe to validator events on ws", err)
 		return
 	}
 
@@ -195,11 +196,11 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	var currentBlock, aliveBlock int64
 	var missingCount int
 
-	log.Println("watching for missed precommits")
+	l.Println("watching for missed precommits")
 	for {
 		select {
 		case <-client.Quit():
-			log.Println("client quit")
+			l.Println("client quit")
 			return
 
 		case evt := <-blockEvent:
@@ -208,7 +209,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 			}
 			block, ok := evt.Data.(types.EventDataNewBlock)
 			if !ok {
-				log.Println("got the wrong event type")
+				l.Println("got the wrong event type")
 				return
 			}
 			currentBlock = block.Block.Height
@@ -221,7 +222,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 					missingCount = 0
 					missed = false
 					if currentBlock % 30 == 0 {
-						log.Println("block", currentBlock)
+						l.Println("block", currentBlock)
 					}
 					break
 				}
@@ -231,13 +232,13 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 				if missingCount == alertThreshold || missingCount % alertReminder == 0 {
 					notifications <- fmt.Sprintf("ALERT validator has missed %d blocks on %s", missingCount, network)
 				}
-				log.Println("missed a precommit at height:", currentBlock)
+				l.Println("missed a precommit at height:", currentBlock)
 			}
 
 		case evt := <-valUpdates:
 			update, ok := evt.Data.(types.EventDataValidatorSetUpdates)
 			if !ok {
-				log.Println("got the wrong event type for a validator update")
+				l.Println("got the wrong event type for a validator update")
 				return
 			}
 			var wasActive = isActive
@@ -256,7 +257,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 
 		case <-alive.C:
 			if currentBlock <= aliveBlock {
-				log.Println("have not seen a new block in 4 minutes, reconnecting")
+				l.Println("have not seen a new block in 4 minutes, reconnecting")
 				return
 			}
 			aliveBlock = currentBlock
@@ -264,11 +265,11 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 			status, e = client.Status(cx)
 			cn()
 			if e != nil {
-				log.Println("could not check sync status", e)
+				l.Println("could not check sync status", e)
 				return
 			}
 			if status.SyncInfo.CatchingUp {
-				log.Println("node is syncing")
+				l.Println("node is syncing")
 				return
 			}
 		}
