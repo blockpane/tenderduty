@@ -160,7 +160,10 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 		return
 	}
 
-	_, consPubBytes, _ := bech32.DecodeAndConvert(consAddr)
+	_, consPubBytes, err := bech32.DecodeAndConvert(consAddr)
+	if err != nil {
+		l.Fatal("valcons address is invalid:", err)
+	}
 	for i := range valSet.Validators {
 		if bytes.Equal(valSet.Validators[i].Address.Bytes(), consPubBytes) {
 			myValidator = valSet.Validators[i]
