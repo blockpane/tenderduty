@@ -20,11 +20,10 @@ import (
 
 var (
 	alertThreshold, alertReminder int
+	l = log.New(os.Stdout, fmt.Sprintf("%-12s | ", "tenderduty"), log.LstdFlags|log.Lshortfile)
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
 	var endpoints, consAddr, pagerDuty string
 	var testPD bool
 	flag.StringVar(&endpoints, "u", "", "Required: comma seperated list of tendermint RPC urls (http:// or unix://)")
@@ -54,13 +53,13 @@ func main() {
 	}
 
 	if testPD {
-		log.Println("Sending trigger event")
+		l.Println("Sending trigger event")
 		err := notifyPagerduty(false, "ALERT tenderduty test event", consAddr, pagerDuty)
 		if err != nil {
 			log.Fatal(err)
 		}
 		time.Sleep(10 * time.Second)
-		log.Println("Sending resolve event")
+		l.Println("Sending resolve event")
 		err = notifyPagerduty(true, "RESOLVED tenderduty test event", consAddr, pagerDuty)
 		if err != nil {
 			log.Fatal(err)
@@ -79,14 +78,14 @@ func main() {
 				watchCommits(client, consAddr, notifications)
 			}()
 			time.Sleep(3 * time.Second)
-			log.Println("attempting to reconnect")
+			l.Println("attempting to reconnect")
 		}
 	}()
 
 	for n := range notifications {
-		log.Println(n)
+		l.Println(n)
 		if err := notifyPagerduty(strings.HasPrefix(n, "RESOLVED"), n, consAddr, pagerDuty); err != nil {
-			log.Println(err)
+			l.Println(err)
 		}
 	}
 }
@@ -120,10 +119,10 @@ func connect(endpoints []string) (*rpchttp.HTTP, error) {
 	client, _ := rpchttp.New(endpoint, "/websocket")
 	err := client.Start()
 	if err != nil {
-		log.Println("could not start ws client", err)
+		l.Println("could not start ws client", err)
 		return nil, err
 	}
-	log.Println("connecting to", endpoint)
+	l.Println("connecting to", endpoint)
 	return client, err
 }
 
@@ -142,12 +141,14 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	var status *coretypes.ResultStatus
 	status, err = client.Status(ctx)
 	if err != nil {
-		log.Println("could not get blockchain status", err)
+		l.Println("could not get blockchain status", err)
 		return
 	}
 	network := status.NodeInfo.Network
-	log.Println("connected to", network)
-	l := log.New(os.Stdout, fmt.Sprintf("%-12s | ", network), log.LstdFlags|log.Lshortfile)
+	l.Println("connected to", network)
+
+	// update logger once we know network name:
+	l = log.New(os.Stdout, fmt.Sprintf("%-12s | ", network), log.LstdFlags|log.Lshortfile)
 
 	var isActive bool
 
