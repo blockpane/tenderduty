@@ -61,3 +61,9 @@ pager-1      | 2021/08/25 16:36:20 main.go:235: missed a precommit at height: 91
 pager-1      | 2021/08/25 16:37:55 main.go:225: block 919290
 pager-1      | 2021/08/25 16:41:05 main.go:225: block 919320
 ```
+
+To find your consensus address (valcons):
+
+```
+gaiad tendermint show-address
+```
