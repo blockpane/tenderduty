@@ -4,14 +4,14 @@ A [PagerDuty](https://github.com/PagerDuty/go-pagerduty) notifier for [Cosmos](h
 
 This will probably only work on Tendermint 0.34.x chains.
 
-Features:
+## Features
 
-* Will send an alert if a certain threshold of (consecutive) missed pre-commits are seen.
-* Alerts if the validator leaves the active set.
-* Will resolve the alert once the validator is signing again.
-* Accepts a list of Tendermint RPC endpoints and randomly connects to one (_does not need to run on the validator node._)
+- Will send an alert if a certain threshold of (consecutive) missed pre-commits are seen.
+- Alerts if the validator leaves the active set.
+- Will resolve the alert once the validator is signing again.
+- Accepts a list of Tendermint RPC endpoints and randomly connects to one (_does not need to run on the validator node._)
 
-Install:
+## Install
 
 ```shell
 $ git clone https://github.com/blockpane/tenderduty.git
@@ -19,14 +19,14 @@ $ cd tenderduty
 $ go build -ldflags "-s -w" -o tenderduty main.go
 ```
 
-Options:
+## Options
 
-```
+```shell
 Usage of tenderduty:
   -c string
         Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'
   -p string
-        Required: pagerduty api key
+        Required: pagerduty integration key (32 character)
   -reminder int
         send additional alert every <reminder> blocks if still missing (default 1200)
   -test
@@ -37,7 +37,7 @@ Usage of tenderduty:
         Required: comma seperated list of tendermint RPC urls (http:// or unix://)
 ```
 
-Example use:
+## Example use
 
 ```shell
 $ tenderduty -c pagevalcons1... -u http://1.2.3.4:26657,http://3.4.5.6:26657 -p efghi...
@@ -62,8 +62,15 @@ pager-1      | 2021/08/25 16:37:55 main.go:225: block 919290
 pager-1      | 2021/08/25 16:41:05 main.go:225: block 919320
 ```
 
-To find your consensus address (valcons):
+### To find your consensus address (valcons)
 
-```
+```shell
 gaiad tendermint show-address
 ```
+
+### To find your pagerduty integration key
+
+- Within PagerDuty, go to Services --> Service Directory --> New Service
+- Give your service a name, select an escalation policy, and set an alert grouping preference
+- Select the PagerDuty Events API V2 Integration, hit Create Service
+- Copy the 32 character `Integration Key` on the tenderduty command line
