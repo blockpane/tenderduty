@@ -20,7 +20,8 @@ import (
 
 var (
 	alertThreshold, alertReminder int
-	l = log.New(os.Stdout, fmt.Sprintf("%-12s | ", "tenderduty"), log.LstdFlags|log.Lshortfile)
+	l                             = log.New(os.Stdout, fmt.Sprintf("%-12s | ", "tenderduty"), log.LstdFlags|log.Lshortfile)
+	deadCounter, deadAfter        int
 )
 
 func main() {
@@ -31,6 +32,7 @@ func main() {
 	flag.StringVar(&pagerDuty, "p", "", "Required: pagerduty api key")
 	flag.IntVar(&alertThreshold, "threshold", 3, "alert threshold for missed precommits")
 	flag.IntVar(&alertReminder, "reminder", 1200, "send additional alert every <reminder> blocks if still missing")
+	flag.IntVar(&deadCounter, "stalled", 10, "alert if minutes since last block exceeds this value")
 	flag.BoolVar(&testPD, "test", false, "send a test alert to pager duty, wait 10 seconds, resolve the incident and exit")
 	flag.Parse()
 
@@ -195,7 +197,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	}
 
 	// watchdog ticker
-	alive := time.NewTicker(4 * time.Minute)
+	alive := time.NewTicker(time.Minute)
 
 	var currentBlock, aliveBlock int64
 	var missingCount int
@@ -261,8 +263,17 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 
 		case <-alive.C:
 			if currentBlock <= aliveBlock {
-				l.Println("have not seen a new block in 4 minutes, reconnecting")
+				l.Println("have not seen a new block in 1 minutes, reconnecting")
+				deadAfter += 1
 				return
+			} else if deadCounter >= deadAfter {
+				deadCounter = 0
+				notifications <- "RESOLVED blocks are incrementing on " + network
+			} else {
+				deadCounter = 0
+			}
+			if deadAfter == deadCounter {
+				notifications <- fmt.Sprintf("ALERT have not seen a new block in %d minutes on %s", deadAfter, network)
 			}
 			aliveBlock = currentBlock
 			cx, cn := context.WithTimeout(context.Background(), 2*time.Second)
