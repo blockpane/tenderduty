@@ -20,7 +20,8 @@ import (
 
 var (
 	alertThreshold, alertReminder int
-	l = log.New(os.Stdout, fmt.Sprintf("%-12s | ", "tenderduty"), log.LstdFlags|log.Lshortfile)
+	l                             = log.New(os.Stdout, fmt.Sprintf("%-12s | ", "tenderduty"), log.LstdFlags|log.Lshortfile)
+	stuckMinutes                  time.Duration
 )
 
 func main() {
@@ -32,6 +33,7 @@ func main() {
 	flag.IntVar(&alertThreshold, "threshold", 3, "alert threshold for missed precommits")
 	flag.IntVar(&alertReminder, "reminder", 1200, "send additional alert every <reminder> blocks if still missing")
 	flag.BoolVar(&testPD, "test", false, "send a test alert to pager duty, wait 10 seconds, resolve the incident and exit")
+	flag.DurationVar(&stuckMinutes, "stalled", 10*time.Minute, "duration for alerting that chain has stalled if blocks are not incrementing")
 	flag.Parse()
 
 	rpcs := strings.Split(strings.ReplaceAll(endpoints, " ", ""), ",")
@@ -133,6 +135,8 @@ func intn(mod int) int {
 }
 
 func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan string) {
+	stalledChan := make(chan interface{}, 1)
+	defer close(stalledChan)
 	defer client.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -200,6 +204,27 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	var currentBlock, aliveBlock int64
 	var missingCount int
 
+	currentTime := time.Now().UTC()
+	go func() {
+		tick := time.NewTicker(time.Minute)
+		var stalled bool
+		for {
+			select {
+			case <-stalledChan:
+				return
+
+			case <-tick.C:
+				if currentTime.Before(time.Now().UTC().Add(-stuckMinutes)) && !stalled {
+					notifications <- fmt.Sprintf("ALERT last block incremented %v ago, possible loss of consensus", time.Now().UTC().Sub(currentTime))
+					stalled = true
+				} else if stalled {
+					stalled = false
+					notifications <- "RESOLVED blocks are incrementing"
+				}
+			}
+		}
+	}()
+
 	l.Println("watching for missed precommits")
 	for {
 		select {
@@ -217,6 +242,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 				return
 			}
 			currentBlock = block.Block.Height
+			currentTime = block.Block.Time
 			missed := true
 			for _, sig := range block.Block.LastCommit.Signatures {
 				if sig.ValidatorAddress.String() == myValidator.Address.String() {
