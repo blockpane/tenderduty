@@ -155,7 +155,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	var isActive bool
 
 	var myValidator *types.Validator
-	page, perPage := 1, 500
+	page, perPage := 1, 100 // have to use 100 due to abci bug where perPage is ignored when > 100
 	valSet, err := client.Validators(ctx, &status.SyncInfo.LatestBlockHeight, &page, &perPage)
 	if err != nil {
 		l.Println("could not get current validator set", err)
@@ -166,12 +166,25 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	if err != nil {
 		l.Fatal("valcons address is invalid:", err)
 	}
-	for i := range valSet.Validators {
-		if bytes.Equal(valSet.Validators[i].Address.Bytes(), consPubBytes) {
-			myValidator = valSet.Validators[i]
-			isActive = true
-			l.Printf("found %s in the active validator set.", consAddr)
-			break
+	// use paging or we can't find validators ranked > 100
+	repeat := 1
+	if valSet.Total > 100 {
+		repeat += 1 + (valSet.Total / 100)
+	}
+found:
+	for j := 1; j <= repeat; j++ {
+		valSet, err = client.Validators(ctx, &status.SyncInfo.LatestBlockHeight, &j, &perPage)
+		if err != nil {
+			l.Println("could not get current validator set", err)
+			return
+		}
+		for i := range valSet.Validators {
+			if bytes.Equal(valSet.Validators[i].Address.Bytes(), consPubBytes) {
+				myValidator = valSet.Validators[i]
+				isActive = true
+				l.Printf("found %s in the active validator set.", consAddr)
+				break found
+			}
 		}
 	}
 
