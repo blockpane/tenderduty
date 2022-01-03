@@ -169,7 +169,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 	// use paging or we can't find validators ranked > 100
 	repeat := 1
 	if valSet.Total > 100 {
-		repeat += 1 + (valSet.Total / 100)
+		repeat += valSet.Total / 100
 	}
 found:
 	for j := 1; j <= repeat; j++ {
