@@ -14,6 +14,7 @@ import (
 	"github.com/tendermint/tendermint/types"
 	"log"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -25,6 +26,7 @@ var (
 )
 
 func main() {
+	rex := regexp.MustCompile(`[+_-]`)
 	var endpoints, consAddr, pagerDuty string
 	var testPD bool
 	flag.StringVar(&endpoints, "u", "", "Required: comma seperated list of tendermint RPC urls (http:// or unix://)")
@@ -47,6 +49,16 @@ func main() {
 	case pagerDuty:
 		flag.PrintDefaults()
 		log.Fatal("No pagerduty key provided!")
+	}
+
+	if rex.MatchString(pagerDuty) {
+		fmt.Println("The Pagerduty key provided appears to be an Oauth token, not a V2 Events API key.")
+		fmt.Println(`To find your pagerduty integration key
+  * Within PagerDuty, go to Services --> Service Directory --> New Service
+  * Give your service a name, select an escalation policy, and set an alert grouping preference
+  * Select the PagerDuty Events API V2 Integration, hit Create Service
+  * Copy the 32 character Integration Key on the tenderduty command line`)
+		os.Exit(1)
 	}
 
 	if !strings.Contains(consAddr, "valcons") {
@@ -102,7 +114,9 @@ func notifyPagerduty(resolved bool, message, producer, key string) (err error) {
 		action = "resolve"
 		sev = "info"
 	}
-	_, err = pagerduty.ManageEvent(pagerduty.V2Event{
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	_, err = pagerduty.ManageEventWithContext(ctx, pagerduty.V2Event{
 		RoutingKey: key,
 		Action:     action,
 		DedupKey:   producer,
