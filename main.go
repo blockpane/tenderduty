@@ -27,11 +27,12 @@ var (
 
 func main() {
 	rex := regexp.MustCompile(`[+_-]`)
-	var endpoints, consAddr, pagerDuty string
+	var endpoints, consAddr, pagerDuty, label string
 	var testPD bool
 	flag.StringVar(&endpoints, "u", "", "Required: comma seperated list of tendermint RPC urls (http:// or unix://)")
 	flag.StringVar(&consAddr, "c", "", "Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'")
 	flag.StringVar(&pagerDuty, "p", "", "Required: pagerduty api key")
+	flag.StringVar(&label, "label", "", "Additional text to add to the alert title, added after chain ID string")
 	flag.IntVar(&alertThreshold, "threshold", 3, "alert threshold for missed precommits")
 	flag.IntVar(&alertReminder, "reminder", 1200, "send additional alert every <reminder> blocks if still missing")
 	flag.IntVar(&deadAfter, "stalled", 10, "alert if minutes since last block exceeds this value")
@@ -97,6 +98,9 @@ func main() {
 	}()
 
 	for n := range notifications {
+		if label != "" {
+			n = n + fmt.Sprintf(" (%s)", label)
+		}
 		l.Println(n)
 		if err := notifyPagerduty(strings.HasPrefix(n, "RESOLVED"), n, consAddr, pagerDuty); err != nil {
 			l.Println(err)
