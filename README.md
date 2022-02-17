@@ -23,10 +23,12 @@ $ go build -ldflags "-s -w" -o tenderduty main.go
 
 ```text
 Usage of tenderduty:
-  -c string
+    -c string
         Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'
+  -label string
+        Additional text to add to the alert title, added after chain ID string
   -p string
-        Required: pagerduty api key
+        Required: pagerduty v2 Events api key (32 characters, alphanumeric)
   -reminder int
         send additional alert every <reminder> blocks if still missing (default 1200)
   -stalled int

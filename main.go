@@ -31,7 +31,7 @@ func main() {
 	var testPD bool
 	flag.StringVar(&endpoints, "u", "", "Required: comma seperated list of tendermint RPC urls (http:// or unix://)")
 	flag.StringVar(&consAddr, "c", "", "Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'")
-	flag.StringVar(&pagerDuty, "p", "", "Required: pagerduty api key")
+	flag.StringVar(&pagerDuty, "p", "", "Required: pagerduty v2 Events api key (32 characters, alphanumeric)")
 	flag.StringVar(&label, "label", "", "Additional text to add to the alert title, added after chain ID string")
 	flag.IntVar(&alertThreshold, "threshold", 3, "alert threshold for missed precommits")
 	flag.IntVar(&alertReminder, "reminder", 1200, "send additional alert every <reminder> blocks if still missing")
@@ -99,7 +99,7 @@ func main() {
 
 	for n := range notifications {
 		if label != "" {
-			n = n + fmt.Sprintf(" (%s)", label)
+			n = fmt.Sprintf("%s (%s)", n, label)
 		}
 		l.Println(n)
 		if err := notifyPagerduty(strings.HasPrefix(n, "RESOLVED"), n, consAddr, pagerDuty); err != nil {
