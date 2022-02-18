@@ -23,22 +23,24 @@ $ go build -ldflags "-s -w" -o tenderduty main.go
 
 ```text
 Usage of tenderduty:
-    -c string
+  -c string
         Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'
-  -label string
-        Additional text to add to the alert title, added after chain ID string
   -p string
         Required: pagerduty v2 Events api key (32 characters, alphanumeric)
+  -u string
+        Required: comma seperated list of tendermint RPC urls (http:// or unix://)
   -reminder int
         send additional alert every <reminder> blocks if still missing (default 1200)
   -stalled int
         alert if minutes since last block exceeds this value (default 10)
-  -test
-        send a test alert to pager duty, wait 10 seconds, resolve the incident and exit
   -threshold int
         alert threshold for missed precommits (default 3)
-  -u string
-        Required: comma seperated list of tendermint RPC urls (http:// or unix://)
+  -label string
+        Additional text to add to the alert title, added after chain ID string
+  -alert-unavailable
+        send a pagerduty alert if no RPC endpoints are available
+  -test
+        send a test alert to pager duty, wait 10 seconds, resolve the incident and exit
 ```
 
 ## Example use

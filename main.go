@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/PagerDuty/go-pagerduty"
@@ -23,12 +24,13 @@ var (
 	alertThreshold, alertReminder int
 	l                             = log.New(os.Stdout, fmt.Sprintf("%-12s | ", "tenderduty"), log.LstdFlags|log.Lshortfile)
 	deadCounter, deadAfter        int
+	network                       = "unknown"
 )
 
 func main() {
 	rex := regexp.MustCompile(`[+_-]`)
 	var endpoints, consAddr, pagerDuty, label string
-	var testPD bool
+	var testPD, alertNoEndpoints bool
 	flag.StringVar(&endpoints, "u", "", "Required: comma seperated list of tendermint RPC urls (http:// or unix://)")
 	flag.StringVar(&consAddr, "c", "", "Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'")
 	flag.StringVar(&pagerDuty, "p", "", "Required: pagerduty v2 Events api key (32 characters, alphanumeric)")
@@ -37,19 +39,20 @@ func main() {
 	flag.IntVar(&alertReminder, "reminder", 1200, "send additional alert every <reminder> blocks if still missing")
 	flag.IntVar(&deadAfter, "stalled", 10, "alert if minutes since last block exceeds this value")
 	flag.BoolVar(&testPD, "test", false, "send a test alert to pager duty, wait 10 seconds, resolve the incident and exit")
+	flag.BoolVar(&alertNoEndpoints, "alert-unavailable", false, "send a pagerduty alert if no RPC endpoints are available")
 	flag.Parse()
 
 	rpcs := strings.Split(strings.ReplaceAll(endpoints, " ", ""), ",")
 	switch "" {
 	case rpcs[0]:
 		flag.PrintDefaults()
-		log.Fatal("No endpoints provided!")
+		l.Fatal("No endpoints provided!")
 	case consAddr:
 		flag.PrintDefaults()
-		log.Fatal("No valconspub provided!")
+		l.Fatal("No valconspub provided!")
 	case pagerDuty:
 		flag.PrintDefaults()
-		log.Fatal("No pagerduty key provided!")
+		l.Fatal("No pagerduty key provided!")
 	}
 
 	if rex.MatchString(pagerDuty) {
@@ -64,32 +67,54 @@ func main() {
 
 	if !strings.Contains(consAddr, "valcons") {
 		flag.PrintDefaults()
-		log.Fatal("expected 'valcons' in the consensus key")
+		l.Fatal("expected 'valcons' in the consensus key")
 	}
 
 	if testPD {
 		l.Println("Sending trigger event")
 		err := notifyPagerduty(false, "ALERT tenderduty test event", consAddr, pagerDuty)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
 		time.Sleep(10 * time.Second)
 		l.Println("Sending resolve event")
 		err = notifyPagerduty(true, "RESOLVED tenderduty test event", consAddr, pagerDuty)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
 		os.Exit(0)
 	}
 
+	// ensure we have at least one working endpoint
+	l.Printf("checking that at least 1 of %d endpoints are available", len(rpcs))
+	count, e := checkEndpoints(rpcs, l)
+	if e != nil {
+		l.Fatal("FATAL:", e)
+	}
+	l.Printf("successfully connected to %d endpoints", count)
 	notifications := make(chan string)
+	connectionErrors := 0
+	connectionAlarm := false
 	go func() {
 		for {
 			func() {
+				if !connectionAlarm && alertNoEndpoints && connectionErrors > len(rpcs) {
+					l.Println("too many connection errors, checking for live RPC endpoints")
+					_, e = checkEndpoints(rpcs, l)
+					if e != nil {
+						connectionAlarm = true
+						notifications <- "ALERT tenderduty cannot connect to RPC on " + network
+					}
+				}
 				client, err := connect(rpcs)
 				if err != nil {
+					connectionErrors += 1
 					return
 				}
+				if connectionAlarm {
+					notifications <- "RESOLVED tenderduty connected to RPC on " + network
+				}
+				connectionErrors = 0
 				watchCommits(client, consAddr, notifications)
 			}()
 			time.Sleep(3 * time.Second)
@@ -146,6 +171,31 @@ func connect(endpoints []string) (*rpchttp.HTTP, error) {
 	return client, err
 }
 
+func checkEndpoints(endpoints []string, l *log.Logger) (available int, err error) {
+	available = len(endpoints)
+	ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Second)
+	defer cancel()
+	for i := range endpoints {
+		endpoint := endpoints[i]
+		client, _ := rpchttp.New(endpoint, "/websocket")
+		e := client.Start()
+		if e != nil {
+			l.Println("Warning: could not connect to", endpoint, e)
+			available -= 1
+			continue
+		}
+		_, e = client.Status(ctx)
+		if e != nil {
+			l.Println("Warning: could get status of", endpoint, e)
+			available -= 1
+		}
+	}
+	if available == 0 {
+		err = errors.New("no RPC endpoints are available")
+	}
+	return
+}
+
 func intn(mod int) int {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
@@ -164,7 +214,7 @@ func watchCommits(client *rpchttp.HTTP, consAddr string, notifications chan stri
 		l.Println("could not get blockchain status", err)
 		return
 	}
-	network := status.NodeInfo.Network
+	network = status.NodeInfo.Network
 	l.Println("connected to", network)
 
 	// update logger once we know network name:
