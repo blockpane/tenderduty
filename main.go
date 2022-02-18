@@ -112,6 +112,7 @@ func main() {
 					return
 				}
 				if connectionAlarm {
+					connectionAlarm = false
 					notifications <- "RESOLVED tenderduty connected to RPC on " + network
 				}
 				connectionErrors = 0
