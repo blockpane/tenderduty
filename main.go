@@ -66,8 +66,7 @@ func main() {
 	}
 
 	if !strings.Contains(consAddr, "valcons") {
-		flag.PrintDefaults()
-		l.Fatal("expected 'valcons' in the consensus key")
+		l.Println("Warning: expected 'valcons' in the consensus key.")
 	}
 
 	if testPD {
