@@ -2,7 +2,9 @@
 
 A [PagerDuty](https://github.com/PagerDuty/go-pagerduty) notifier for [Cosmos](https://github.com/cosmos/cosmos-sdk) / [Tendermint](https://github.com/tendermint/tendermint) validators.
 
-This will probably only work on Tendermint 0.34.x chains.
+This will probably only work on Tendermint 0.34.x chains. 
+
+**Note**: The Tendermint client has incomplete support for TLS encrypted websockets, and requires a non-encrypted connection to the RPC endpoint.
 
 ## Features
 
