@@ -2,7 +2,7 @@ package tenderduty
 
 import (
 	"fmt"
-	dash "github.com/blockpane/tenderduty2/dashboard"
+	dash "github.com/blockpane/tenderduty/dashboard"
 	"log"
 	"time"
 )

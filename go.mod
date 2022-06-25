@@ -1,4 +1,4 @@
-module github.com/blockpane/tenderduty2
+module github.com/blockpane/tenderduty
 
 go 1.18
 

@@ -3,7 +3,7 @@ package tenderduty
 import (
 	"context"
 	"fmt"
-	dash "github.com/blockpane/tenderduty2/dashboard"
+	dash "github.com/blockpane/tenderduty/dashboard"
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"net/url"
