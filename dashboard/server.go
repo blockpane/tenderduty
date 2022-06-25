@@ -1,0 +1,149 @@
+package dash
+
+import (
+	"embed"
+	"encoding/json"
+	"github.com/gorilla/websocket"
+	"github.com/textileio/go-threads/broadcast"
+	"io/fs"
+	"log"
+	"net/http"
+	"sort"
+	"sync"
+	"time"
+)
+
+var (
+	Content embed.FS
+	rootDir fs.FS
+)
+
+const logLength = 256
+
+func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLogs bool) {
+	var err error
+	rootDir, err = fs.Sub(Content, "static")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	var cast broadcast.Broadcaster
+	defer cast.Discard()
+
+	// cache the json .... don't serialize on-demand
+	logCache, statusCache := []byte{'[', ']'}, []byte{'{', '}'}
+
+	statusMux := sync.Mutex{}
+	status := make(map[string]*ChainStatus)
+	logSlice := make([]LogMessage, 0)
+
+	type statusUpdate struct {
+		MessageType string `json:"msgType"`
+		Status      []*ChainStatus
+	}
+
+	go func() {
+		tick := time.NewTicker(time.Second)
+		update := false
+		for {
+			select {
+			case <-tick.C:
+				if update {
+					_ = cast.Send(statusCache)
+					update = false
+				}
+
+			case u := <-updates:
+				statusMux.Lock() // probably unnecessary
+				status[u.Name] = u
+				result := make([]*ChainStatus, 0)
+				for k := range status {
+					result = append(result, status[k])
+				}
+				statusMux.Unlock()
+				sort.Slice(result, func(i, j int) bool {
+					return sort.StringsAreSorted([]string{result[i].Name, result[j].Name})
+				})
+				j, e := json.Marshal(statusUpdate{
+					MessageType: "update",
+					Status:      result,
+				})
+				if e != nil {
+					continue
+				}
+				statusCache = j
+				update = true
+
+			case l := <-logs:
+				if hideLogs {
+					continue
+				}
+				if len(logSlice) >= logLength {
+					logSlice = append([]LogMessage{l}, logSlice[0:len(logSlice)-1]...)
+				} else {
+					logSlice = append([]LogMessage{l}, logSlice...)
+				}
+				j, e := json.Marshal(logSlice)
+				if e != nil {
+					continue
+				}
+				logCache = j
+				j, e = json.Marshal(l)
+				if e != nil {
+					continue
+				}
+				_ = cast.Send(j)
+
+			default:
+				continue
+			}
+		}
+	}()
+
+	var upgrader = websocket.Upgrader{}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	upgrader.EnableCompression = true
+
+	http.HandleFunc("/ws", func(writer http.ResponseWriter, request *http.Request) {
+		c, err := upgrader.Upgrade(writer, request, nil)
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		sub := cast.Listen()
+		defer sub.Discard()
+		for message := range sub.Channel() {
+			_ = c.WriteMessage(websocket.TextMessage, message.([]byte))
+		}
+	})
+
+	http.HandleFunc("/logsenabled", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Header().Set("Access-Control-Allow-Origin", "*")
+		j, _ := json.Marshal(map[string]bool{"enabled": !hideLogs})
+		_, _ = writer.Write(j)
+	})
+
+	http.HandleFunc("/logs", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Header().Set("Access-Control-Allow-Origin", "*")
+		_, _ = writer.Write(logCache)
+	})
+
+	http.HandleFunc("/state", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Header().Set("Access-Control-Allow-Origin", "*")
+		_, _ = writer.Write(statusCache)
+	})
+
+	http.Handle("/", &CacheHandler{})
+	log.Fatal("tenderduty - dashboard:", http.ListenAndServe(":"+port, nil))
+}
+
+// CacheHandler implements the Handler interface with a very long Cache-Control set on responses
+type CacheHandler struct{}
+
+func (ch CacheHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Cache-Control", "public, max-age=86400")
+	writer.Header().Set("X-Powered-By", "https://github.com/blockpane/tenderduty")
+	http.FileServer(http.FS(rootDir)).ServeHTTP(writer, request)
+}

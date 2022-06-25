@@ -1,0 +1,55 @@
+---
+
+enable_dashboard: yes
+listen_port: 8888
+hide_logs: no
+node_down_alert_minutes: 3
+
+prometheus_enabled: yes
+prometheus_listen_port: 28686
+
+pagerduty:
+  enabled: yes
+  api_key: aaaaaaaaaaaabbbbbbbbbbbbbcccccccccccc
+  default_severity: alert
+
+discord:
+  enabled: no
+  webhook: https://discord.com/api/webhooks/999999999999999999/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
+
+telegram:
+  enabled: no
+  api_key: '5555555555:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  channel: "-666666666"
+
+chains:
+
+  "osmosis":
+    chain_id: osmosis-1
+    valoper_address: osmovaloper1xxxxxxx...
+    public_fallback: no
+
+    alerts:
+      stalled_minutes: 10
+      stalled_enabled: yes
+
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+
+      percentage_window: 50
+      percentage_priority: warning
+      percentage_enabled: no
+
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+
+      pagerduty_alerts: yes
+      discord_alerts: no
+      telegram_alerts: no
+
+    nodes:
+      - url: tcp://localhost:26657
+        alert_if_down: yes
+      - url: https://some-other-node:443
+        alert_if_down: no

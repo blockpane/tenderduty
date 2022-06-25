@@ -17,3 +17,5 @@ docker-compose.yml
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+.DS_Store
+config.yml
