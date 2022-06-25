@@ -21,7 +21,7 @@ git clone https://github.com/blockpane/tenderduty
 cd tenderduty
 git checkout feature/v2
 cp example-config.yml config.yml
-# edit example.yml
+# edit config.yml
 go get ./...
 go run cmd/tenderduty/main.go
 ```
