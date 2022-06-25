@@ -79,12 +79,12 @@ type ChainConfig struct {
 	// ExtraInfo will be appended to the alert data. This is useful for pagerduty because multiple tenderduty instances
 	// can be pointed at pagerduty and duplicate alerts will be filtered by using a key. The first alert will win, this
 	// can be useful for knowing what tenderduty instance sent the alert.
-	ExtraInfo string `yaml:"extra_info"`
+	ExtraInfo string `yaml:"extra_info"` // FIXME not used yet!
 	// Alerts defines the types of alerts to send for this chain.
 	Alerts AlertConfig `yaml:"alerts"`
 	// PublicFallback determines if tenderduty should attempt to use public RPC endpoints in the situation that not
 	// explicitly defined RPC servers are available. Not recommended.
-	PublicFallback bool `yaml:"public_fallback"`
+	PublicFallback bool `yaml:"public_fallback"` // FIXME not used
 	// Nodes defines what RPC servers to connect to.
 	Nodes []*NodeConfig `yaml:"nodes"`
 }

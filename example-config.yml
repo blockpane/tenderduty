@@ -60,7 +60,7 @@ chains:
     alerts:
       # If the chain stops seeing new blocks, should an alert be sent?
       stalled_enabled: yes
-      # How long a halted chain takes to generate an alarm
+      # How long a halted chain takes in minutes to generate an alarm
       stalled_minutes: 10
 
       # Most basic alarm, you just missed x blocks ... would you like to know?
@@ -74,7 +74,7 @@ chains:
       # a downtime jail infraction. Should an alert be sent if a certain percentage of this window is exceeded?
       percentage_enabled: no
       # What percentage should trigger the alert
-      percentage_window: 10
+      percentage_missed: 10
       # Not used yet, pagerduty routing hint
       percentage_priority: warning
 
