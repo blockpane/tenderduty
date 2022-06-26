@@ -79,7 +79,6 @@ func Run(configFile string) error {
 				e := cc.newRpc()
 				if e != nil {
 					l(cc.ChainId, e)
-					td.alert(cc.name, e.Error(), "critical", false, &cc.name)
 					time.Sleep(5 * time.Second)
 					continue
 				}
