@@ -151,22 +151,24 @@ func (cc *ChainConfig) WsRun() {
 					case cc.valInfo.Jailed:
 						info += "- validator is jailed\n"
 					}
-					td.updateChan <- &dash.ChainStatus{
-						MsgType:      "status",
-						Name:         cc.name,
-						ChainId:      cc.ChainId,
-						Moniker:      cc.valInfo.Moniker,
-						Bonded:       cc.valInfo.Bonded,
-						Jailed:       cc.valInfo.Jailed,
-						Tombstoned:   cc.valInfo.Tombstoned,
-						Missed:       cc.valInfo.Missed,
-						Window:       cc.valInfo.Window,
-						Nodes:        len(cc.Nodes),
-						HealthyNodes: healthyNodes,
-						ActiveAlerts: cc.activeAlerts,
-						Height:       update.Height,
-						LastError:    info,
-						Blocks:       cc.blocksResults,
+					if td.EnableDash {
+						td.updateChan <- &dash.ChainStatus{
+							MsgType:      "status",
+							Name:         cc.name,
+							ChainId:      cc.ChainId,
+							Moniker:      cc.valInfo.Moniker,
+							Bonded:       cc.valInfo.Bonded,
+							Jailed:       cc.valInfo.Jailed,
+							Tombstoned:   cc.valInfo.Tombstoned,
+							Missed:       cc.valInfo.Missed,
+							Window:       cc.valInfo.Window,
+							Nodes:        len(cc.Nodes),
+							HealthyNodes: healthyNodes,
+							ActiveAlerts: cc.activeAlerts,
+							Height:       update.Height,
+							LastError:    info,
+							Blocks:       cc.blocksResults,
+						}
 					}
 
 					if td.Prom {

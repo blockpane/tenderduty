@@ -54,9 +54,21 @@ func Run(configFile string) error {
 	if td.EnableDash {
 		l("starting dashboard on", td.Listen)
 		go dash.Serve(td.Listen, td.updateChan, td.logChan, td.HideLogs)
+	} else {
+		go func() {
+			for {
+				_ = <-td.updateChan
+			}
+		}()
 	}
 	if td.Prom {
 		go prometheusExporter(td.ctx, td.statsChan)
+	} else {
+		go func() {
+			for {
+				_ = <-td.statsChan
+			}
+		}()
 	}
 
 	for k := range td.Chains {

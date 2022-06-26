@@ -224,22 +224,23 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		case !v.Alerts.PagerdutyAlerts && !v.Alerts.DiscordAlerts && !v.Alerts.TelegramAlerts:
 			problems = append(problems, fmt.Sprintf("warn: %s has no notifications configured", k))
 		}
-		td.updateChan <- &dash.ChainStatus{
-			MsgType:      "status",
-			Name:         v.name,
-			ChainId:      v.ChainId,
-			Moniker:      v.valInfo.Moniker,
-			Bonded:       v.valInfo.Bonded,
-			Jailed:       v.valInfo.Jailed,
-			Tombstoned:   v.valInfo.Tombstoned,
-			Missed:       v.valInfo.Missed,
-			Window:       v.valInfo.Window,
-			Nodes:        len(v.Nodes),
-			HealthyNodes: 0,
-			ActiveAlerts: 0,
-			Blocks:       v.blocksResults,
+		if td.EnableDash {
+			td.updateChan <- &dash.ChainStatus{
+				MsgType:      "status",
+				Name:         v.name,
+				ChainId:      v.ChainId,
+				Moniker:      v.valInfo.Moniker,
+				Bonded:       v.valInfo.Bonded,
+				Jailed:       v.valInfo.Jailed,
+				Tombstoned:   v.valInfo.Tombstoned,
+				Missed:       v.valInfo.Missed,
+				Window:       v.valInfo.Window,
+				Nodes:        len(v.Nodes),
+				HealthyNodes: 0,
+				ActiveAlerts: 0,
+				Blocks:       v.blocksResults,
+			}
 		}
-
 	}
 	return
 }
