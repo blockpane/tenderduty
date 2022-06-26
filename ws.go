@@ -234,7 +234,7 @@ func (cc *ChainConfig) WsRun() {
 			break
 		}
 	}
-	l(fmt.Sprintf("⚙️ %-12s watching for NewBlock and Vote events", cc.ChainId))
+	l(fmt.Sprintf("⚙️ %-12s watching for NewBlock and Vote events via %s", cc.ChainId, cc.client.Remote()))
 	for {
 		select {
 		case <-cc.client.Quit():

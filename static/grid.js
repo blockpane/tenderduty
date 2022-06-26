@@ -7,6 +7,30 @@ let gridW = w
 let gridTextMax = textMax
 let gridTextW = textW
 let scale = 1
+let textColor = "#b0b0b0"
+
+let signColorAlpha = 0.4 // alpha set in loop
+let isDark = true
+
+function lightMode() {
+    isDark = !isDark
+    if (isDark) {
+        textColor = "#b0b0b0"
+        signColorAlpha = 0.4
+        document.body.className = "uk-background-secondary uk-light"
+        document.getElementById('canvasDiv').className = "uk-width-expand uk-overflow-auto uk-background-secondary"
+        document.getElementById("tableDiv").className = "uk-padding-small uk-text-small uk-background-secondary uk-overflow-auto"
+        document.getElementById("legendContainer").className = "uk-nav-center uk-background-secondary uk-padding-remove"
+
+        return
+    }
+    textColor = "#3f3f3f"
+    signColorAlpha = 0.2
+    document.body.className = "uk-background-default uk-text-default"
+    document.getElementById('canvasDiv').className = "uk-width-expand uk-overflow-auto uk-background-default"
+    document.getElementById("tableDiv").className = "uk-padding-small uk-text-small uk-background-default uk-overflow-auto"
+    document.getElementById("legendContainer").className = "uk-nav-center uk-background-default uk-padding-remove"
+}
 
 function fix_dpi(id) {
     let canvas = document.getElementById(id),
@@ -112,11 +136,13 @@ function drawSeries(multiStates) {
     if (canvas.getContext) {
         const ctx = canvas.getContext('2d')
         ctx.font = `${scale * 16}px sans-serif`
+        ctx.fillStyle = textColor
 
         let crossThrough = false
         for (let j = 0; j < multiStates.Status.length; j++) {
 
-            ctx.fillStyle = 'white'
+            //ctx.fillStyle = 'white'
+            ctx.fillStyle = textColor
             ctx.fillText(multiStates.Status[j].name, 5, (j*gridH)+(gridH*2)-6, gridTextMax)
 
             for (let i = 0; i < multiStates.Status[j].blocks.length; i++) {
@@ -130,11 +156,11 @@ function drawSeries(multiStates) {
                         break
                     case 3: // signed
                         if (j % 2 === 0) {
-                            grad.addColorStop(0, 'rgba(0,0,0,0.4)');
-                            grad.addColorStop(0.9, 'rgba(0,0,0,0.4)');
+                            grad.addColorStop(0, `rgba(0,0,0,${signColorAlpha})`);
+                            grad.addColorStop(0.9, `rgba(0,0,0,${signColorAlpha})`);
                         } else {
-                            grad.addColorStop(0, 'rgba(0,0,0,0.1)');
-                            grad.addColorStop(0.9, 'rgba(0,0,0,0.1)');
+                            grad.addColorStop(0, `rgba(0,0,0,${signColorAlpha-0.3})`);
+                            grad.addColorStop(0.9, `rgba(0,0,0,${signColorAlpha-0.3})`);
                         }
                         grad.addColorStop(1, 'rgb(186,186,186)');
                         break

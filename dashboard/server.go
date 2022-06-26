@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"regexp"
 	"sort"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 var (
 	Content embed.FS
 	rootDir fs.FS
+	rex     = regexp.MustCompile(`\W(https?|tcp|wss?)://.+\w`)
 )
 
 const logLength = 256
@@ -53,6 +55,10 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 				}
 
 			case u := <-updates:
+				// try to catch any accidental rpc endpoint leaks
+				if hideLogs && rex.MatchString(u.LastError) {
+					rex.ReplaceAllString(u.LastError, "-redacted-")
+				}
 				statusMux.Lock() // probably unnecessary
 				status[u.Name] = u
 				result := make([]*ChainStatus, 0)
