@@ -20,15 +20,17 @@
 </head>
 
 <body class="uk-background-secondary uk-light" onload="loadState(); legend()">
+
 <div class="uk-container uk-width-expand uk-height-viewport">
   <div class="uk-width-expand uk-overflow-auto uk-background-secondary">
     <div style="width: 4835px;" class="uk-padding-remove-horizontal">
       <canvas id="canvas" height="20" width="4735"></canvas>
     </div>
-    <div class="uk-nav-center uk-background-secondary uk-padding-remove">
+    <div id="legendContainer" class="uk-nav-center uk-background-secondary uk-padding-remove">
       <canvas id="legend" height="32" width="700"></canvas>
     </div>
   </div>
+
   <div class="uk-padding-small uk-text-small uk-background-secondary uk-overflow-auto">
     <table class="uk-table uk-table-small uk-table-justify uk-padding-remove">
       <thead>
@@ -45,7 +47,11 @@
       <tbody id="statusTable"></tbody>
     </table>
   </div>
-  <div class="uk-padding-large uk-padding-remove-top" id="logContainer"><pre id="logs" class="uk-panel-scrollable uk-resize-vertical " style="background: #080808; height: 300px;"></pre></div>
+
+  <div class="uk-padding-large uk-padding-remove-top" id="logContainer">
+    <pre id="logs" class="uk-panel-scrollable uk-resize-vertical " style="background: #080808; height: 300px;"></pre>
+  </div>
+
   <div class="uk-text-small uk-text-center">
     <a class="uk-link-muted" href="https://blockpane.com"><img src="bp-logo-text.svg" alt="[ block pane ]" style="height: 24px;"></a>
     <a href="https://github.com/blockpane/tenderduty"><span uk-icon="github" style="color: white"></span></a>

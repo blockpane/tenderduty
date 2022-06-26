@@ -6,6 +6,7 @@ let gridH = h
 let gridW = w
 let gridTextMax = textMax
 let gridTextW = textW
+let scale = 1
 
 function fix_dpi(id) {
     let canvas = document.getElementById(id),
@@ -15,7 +16,7 @@ function fix_dpi(id) {
     gridW = w * dpi.valueOf()
     gridTextMax = textMax * dpi.valueOf()
     gridTextW = textW * dpi.valueOf()
-    console.log("scaling is "+dpi.valueOf())
+    //console.log("scaling is "+dpi.valueOf())
     let style = {
         height() {
             return +getComputedStyle(canvas).getPropertyValue('height').slice(0,-2);
@@ -26,11 +27,13 @@ function fix_dpi(id) {
     }
     canvas.setAttribute('width', style.width() * dpi);
     canvas.setAttribute('height', style.height() * dpi);
+    scale = dpi.valueOf()
 }
 
 function legend() {
-    fix_dpi("legend")
     const l = document.getElementById("legend")
+    l.height = scale * h * 1.2
+    //const scale = fix_dpi("legend")
     const ctx = l.getContext('2d')
 
     let offset = textW
@@ -40,22 +43,21 @@ function legend() {
     grad.addColorStop(0.8, 'rgb(169,250,149)');
     ctx.fillStyle = grad
     ctx.fillRect(offset, 0, gridW, gridH)
-    ctx.font = '14px sans-serif'
+    ctx.font = `${scale * 14}px sans-serif`
     ctx.fillStyle = 'grey'
     offset += gridW + gridW/2
     ctx.fillText("proposer",offset, gridH/1.2)
 
-    offset += 65
+    offset += 65 * scale
     grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
     grad.addColorStop(0, 'rgba(0,0,0,0.2)');
     ctx.fillStyle = grad
     ctx.fillRect(offset, 0, gridW, gridH)
-    ctx.font = '14px sans-serif'
     ctx.fillStyle = 'grey'
     offset += gridW + gridW/2
     ctx.fillText("signed",offset, gridH/1.2)
 
-    offset += 50
+    offset += 50 * scale
     grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
     grad.addColorStop(0, '#85c0f9');
     grad.addColorStop(0.7, '#85c0f9');
@@ -66,7 +68,7 @@ function legend() {
     ctx.fillStyle = 'grey'
     ctx.fillText("miss/precommit",offset, gridH/1.2)
 
-    offset += 110
+    offset += 110 * scale
     grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
     grad.addColorStop(0, '#381a34');
     grad.addColorStop(0.2, '#d06ec7');
@@ -77,7 +79,7 @@ function legend() {
     ctx.fillStyle = 'grey'
     ctx.fillText("miss/prevote", offset, gridH/1.2)
 
-    offset += 90
+    offset += 90 * scale
     grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
     grad.addColorStop(0, '#8e4b26');
     grad.addColorStop(0.4, 'darkorange');
@@ -93,7 +95,7 @@ function legend() {
     ctx.fillStyle = 'grey'
     ctx.fillText("missed", offset, gridH/1.2)
 
-    offset += 59
+    offset += 59 * scale
     grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
     grad.addColorStop(0, 'rgba(127,127,127,0.3)');
     ctx.fillStyle = grad
@@ -101,8 +103,6 @@ function legend() {
     offset += gridW + gridW/2
     ctx.fillStyle = 'grey'
     ctx.fillText("no data", offset, gridH/1.2)
-
-
 }
 
 function drawSeries(multiStates) {
@@ -111,7 +111,7 @@ function drawSeries(multiStates) {
     fix_dpi("canvas")
     if (canvas.getContext) {
         const ctx = canvas.getContext('2d')
-        ctx.font = '16px sans-serif'
+        ctx.font = `${scale * 16}px sans-serif`
 
         let crossThrough = false
         for (let j = 0; j < multiStates.Status.length; j++) {
