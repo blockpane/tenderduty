@@ -322,7 +322,6 @@ func (cc *ChainConfig) watch() {
 			)
 		}
 
-		// FIXME: need to resolve the alarm if fixed!
 		if cc.Alerts.StalledAlerts && !cc.lastBlockAlarm && !cc.lastBlockTime.IsZero() &&
 			cc.lastBlockTime.Before(time.Now().Add(time.Duration(-cc.Alerts.Stalled)*time.Minute)) {
 
@@ -333,6 +332,15 @@ func (cc *ChainConfig) watch() {
 				fmt.Sprintf("stalled: have not seen a new block on %s in %d minutes", cc.ChainId, cc.Alerts.Stalled),
 				"critical",
 				false,
+				&cc.valInfo.Valcons,
+			)
+		} else if cc.Alerts.StalledAlerts && cc.lastBlockAlarm && cc.lastBlockTime.IsZero() {
+			cc.lastBlockAlarm = false
+			td.alert(
+				cc.name,
+				fmt.Sprintf("stalled: have not seen a new block on %s in %d minutes", cc.ChainId, cc.Alerts.Stalled),
+				"critical",
+				true,
 				&cc.valInfo.Valcons,
 			)
 		}
