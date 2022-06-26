@@ -145,11 +145,11 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 	log.Fatal("tenderduty - dashboard:", http.ListenAndServe(":"+port, nil))
 }
 
-// CacheHandler implements the Handler interface with a very long Cache-Control set on responses
+// CacheHandler implements the Handler interface with a Cache-Control set on responses
 type CacheHandler struct{}
 
 func (ch CacheHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Cache-Control", "public, max-age=86400")
+	writer.Header().Set("Cache-Control", "public, max-age=3600")
 	writer.Header().Set("X-Powered-By", "https://github.com/blockpane/tenderduty")
 	http.FileServer(http.FS(rootDir)).ServeHTTP(writer, request)
 }
