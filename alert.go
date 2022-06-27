@@ -277,6 +277,7 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 
 // watch handles monitoring for missed blocks, stalled chain, node downtime
 // and also updates a few prometheus stats
+// FIXME: not watching for nodes that are lagging the head block!
 func (cc *ChainConfig) watch() {
 	var missedAlarm, pctAlarm, noNodes bool
 	inactive := "jailed"

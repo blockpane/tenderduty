@@ -15,7 +15,7 @@ var td = &Config{}
 
 func Run(configFile, stateFile string, dumpConfig bool) error {
 	var err error
-	td, err = loadConfig(configFile, dumpConfig)
+	td, err = loadConfig(configFile, stateFile, dumpConfig)
 	if err != nil {
 		return err
 	}

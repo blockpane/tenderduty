@@ -3,10 +3,12 @@ package tenderduty
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	dash "github.com/blockpane/tenderduty/dashboard"
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
+	"io"
 	"net/url"
 	"os"
 	"regexp"
@@ -24,6 +26,7 @@ type Config struct {
 	statsChan  chan *promUpdate
 	ctx        context.Context
 	cancel     context.CancelFunc
+	alarms     *alarmCache
 
 	// EnableDash enables the web dashboard
 	EnableDash bool `yaml:"enable_dashboard"`
@@ -260,7 +263,7 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 var defaultConfig []byte
 
 // loadConfig creates a new Config from a file.
-func loadConfig(yamlFile string, dumpDefault bool) (*Config, error) {
+func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
 	if dumpDefault {
 		fmt.Println(string(defaultConfig))
 		os.Exit(0)
@@ -291,6 +294,39 @@ func loadConfig(yamlFile string, dumpDefault bool) (*Config, error) {
 	c.updateChan = make(chan *dash.ChainStatus, 32)
 	c.statsChan = make(chan *promUpdate, 32)
 	c.ctx, c.cancel = context.WithCancel(context.Background())
+
+	// handle cached data. FIXME: incomplete.
+	c.alarms = &alarmCache{
+		SentPdAlarms: make(map[string]time.Time),
+		SentTgAlarms: make(map[string]time.Time),
+		SentDiAlarms: make(map[string]time.Time),
+		AllAlarms:    make(map[string]map[string]time.Time),
+		notifyMux:    sync.RWMutex{},
+	}
+
+	sf, e := os.OpenFile(stateFile, os.O_RDONLY, 0600)
+	if e != nil {
+		l("could not load saved state", e.Error())
+	}
+	defer sf.Close()
+	b, e = io.ReadAll(sf)
+	if e != nil {
+		l("could not read saved state", e.Error())
+	}
+	saved := &savedState{}
+	e = json.Unmarshal(b, saved)
+	if e != nil {
+		l("could not unmarshal saved state", e.Error())
+	}
+	// FIXME
+	if saved.Alarms != nil {
+		// restore alarm state
+	}
+	for k, v := range saved.Blocks {
+		if c.Chains[k] != nil {
+			c.Chains[k].blocksResults = v
+		}
+	}
 
 	return c, nil
 }
