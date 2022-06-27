@@ -111,7 +111,7 @@ func (cc *ChainConfig) WsRun() {
 					info := getAlarms(cc.name)
 					cc.blocksResults = append([]int{int(signState)}, cc.blocksResults[:len(cc.blocksResults)-1]...)
 					if signState < 3 && cc.valInfo.Bonded {
-						warn := fmt.Sprintf("❌ warning       %s missed block %d on %s", cc.valInfo.Moniker, update.Height, cc.ChainId)
+						warn := fmt.Sprintf("❌ warning      %s missed block %d on %s", cc.valInfo.Moniker, update.Height, cc.ChainId)
 						info += warn + "\n"
 						cc.lastError = time.Now().UTC().String() + " " + info
 						l(warn)

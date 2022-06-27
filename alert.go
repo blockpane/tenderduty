@@ -42,39 +42,52 @@ const (
 	di
 )
 
-var (
-	sentPdAlarms = make(map[string]bool)
-	sentTgAlarms = make(map[string]bool)
-	sentDAlarms  = make(map[string]bool)
-	notifyMux    sync.Mutex
-)
+type alarmCache struct {
+	SentPdAlarms map[string]time.Time            `json:"sent_pd_alarms"`
+	SentTgAlarms map[string]time.Time            `json:"sent_tg_alarms"`
+	SentDiAlarms map[string]time.Time            `json:"sent_di_alarms"`
+	AllAlarms    map[string]map[string]time.Time `json:"sent_all_alarms"`
+	notifyMux    sync.RWMutex
+}
+
+// alarms is used to prevent double notifications. TODO: save on exit / load on start
+var alarms = &alarmCache{
+	SentPdAlarms: make(map[string]time.Time),
+	SentTgAlarms: make(map[string]time.Time),
+	SentDiAlarms: make(map[string]time.Time),
+	AllAlarms:    make(map[string]map[string]time.Time),
+	notifyMux:    sync.RWMutex{},
+}
 
 func shouldNotify(msg *alertMsg, dest notifyDest) bool {
-	notifyMux.Lock()
-	defer notifyMux.Unlock()
-	var whichMap map[string]bool
+	alarms.notifyMux.Lock()
+	defer alarms.notifyMux.Unlock()
+	var whichMap map[string]time.Time
 	var service string
+	if alarms.AllAlarms[msg.chain] == nil {
+		alarms.AllAlarms[msg.chain] = make(map[string]time.Time)
+	}
 	switch dest {
 	case pd:
-		whichMap = sentPdAlarms
+		whichMap = alarms.SentPdAlarms
 		service = "PagerDuty"
 	case tg:
-		whichMap = sentTgAlarms
+		whichMap = alarms.SentTgAlarms
 		service = "Telegram"
 	case di:
-		whichMap = sentDAlarms
+		whichMap = alarms.SentDiAlarms
 		service = "Discord"
 	}
-	if whichMap[msg.message] && !msg.resolved {
+	if !whichMap[msg.message].IsZero() && !msg.resolved {
 		// already sent this alert
 		return false
-	} else if whichMap[msg.message] && msg.resolved {
+	} else if !whichMap[msg.message].IsZero() && msg.resolved {
 		// alarm is cleared
 		delete(whichMap, msg.message)
 		l(fmt.Sprintf("💜 Resolved     alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 		return true
 	}
-	whichMap[msg.message] = true
+	whichMap[msg.message] = time.Now()
 	l(fmt.Sprintf("🚨 ALERT        new alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 	return true
 }
@@ -208,21 +221,16 @@ func notifyPagerduty(msg *alertMsg) (err error) {
 	return
 }
 
-var (
-	currentAlarms    = make(map[string]map[string]bool)
-	currentAlarmsMux = sync.RWMutex{}
-)
-
 func getAlarms(chain string) string {
-	currentAlarmsMux.RLock()
-	defer currentAlarmsMux.RUnlock()
+	alarms.notifyMux.RLock()
+	defer alarms.notifyMux.RUnlock()
 	// don't show this info if the logs are disabled on the dashboard, potentially sensitive info could be leaked.
 	//if td.HideLogs || currentAlarms[chain] == nil {
-	if td.HideLogs || currentAlarms[chain] == nil {
+	if td.HideLogs || alarms.AllAlarms[chain] == nil {
 		return ""
 	}
 	result := ""
-	for k := range currentAlarms[chain] {
+	for k := range alarms.AllAlarms[chain] {
 		result += "🚨 " + k + "\n"
 	}
 	return result
@@ -253,24 +261,25 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 	}
 	c.alertChan <- a
 	c.chainsMux.RUnlock()
-	currentAlarmsMux.Lock()
-	defer currentAlarmsMux.Unlock()
-	if currentAlarms[chainName] == nil {
-		currentAlarms[chainName] = make(map[string]bool)
+	alarms.notifyMux.Lock()
+	defer alarms.notifyMux.Unlock()
+	if alarms.AllAlarms[chainName] == nil {
+		alarms.AllAlarms[chainName] = make(map[string]time.Time)
 	}
-	if resolved && currentAlarms[chainName][message] {
-		delete(currentAlarms[chainName], message)
+	if resolved && !alarms.AllAlarms[chainName][message].IsZero() {
+		delete(alarms.AllAlarms[chainName], message)
 		return
 	} else if resolved {
 		return
 	}
-	currentAlarms[chainName][message] = true
+	alarms.AllAlarms[chainName][message] = time.Now()
 }
 
 // watch handles monitoring for missed blocks, stalled chain, node downtime
 // and also updates a few prometheus stats
 func (cc *ChainConfig) watch() {
 	var missedAlarm, pctAlarm, noNodes bool
+	inactive := "jailed"
 	nodeAlarms := make(map[string]bool)
 
 	// wait until we have a moniker:
@@ -322,6 +331,7 @@ func (cc *ChainConfig) watch() {
 			)
 		}
 
+		// stalled chain detection
 		if cc.Alerts.StalledAlerts && !cc.lastBlockAlarm && !cc.lastBlockTime.IsZero() &&
 			cc.lastBlockTime.Before(time.Now().Add(time.Duration(-cc.Alerts.Stalled)*time.Minute)) {
 
@@ -343,6 +353,35 @@ func (cc *ChainConfig) watch() {
 				true,
 				&cc.valInfo.Valcons,
 			)
+		}
+
+		// jailed detection - only alert if it changes.
+		if cc.Alerts.AlertIfInactive && cc.lastValInfo != nil && cc.lastValInfo.Bonded != cc.valInfo.Bonded &&
+			cc.lastValInfo.Moniker == cc.valInfo.Moniker {
+
+			id := cc.valInfo.Valcons + "jailed"
+			// just went inactive, figure out if it's jail or tombstone
+			if !cc.valInfo.Bonded && cc.lastValInfo.Bonded {
+				if cc.valInfo.Tombstoned {
+					// don't worry about changing it back ... lol.
+					inactive = "☠️ tombstoned 🪦"
+				}
+				td.alert(
+					cc.name,
+					fmt.Sprintf("%s is no longer active: validator is %s", cc.valInfo.Moniker, inactive),
+					"critical",
+					false,
+					&id,
+				)
+			} else if cc.valInfo.Bonded && !cc.lastValInfo.Bonded {
+				td.alert(
+					cc.name,
+					fmt.Sprintf("%s is no longer active: validator is %s", cc.valInfo.Moniker, inactive),
+					"info",
+					true,
+					&id,
+				)
+			}
 		}
 
 		// consecutive missed block alarms:

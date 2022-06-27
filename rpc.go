@@ -143,7 +143,18 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 					l("💥", cc.ChainId, e)
 				}
 			}
-			cc.lastValInfo = cc.valInfo // FIXME: this isn't how you deep copy *struct
+			if cc.valInfo != nil {
+				cc.lastValInfo = &ValInfo{
+					Moniker:    cc.valInfo.Moniker,
+					Bonded:     cc.valInfo.Bonded,
+					Jailed:     cc.valInfo.Jailed,
+					Tombstoned: cc.valInfo.Tombstoned,
+					Missed:     cc.valInfo.Missed,
+					Window:     cc.valInfo.Window,
+					Conspub:    cc.valInfo.Conspub,
+					Valcons:    cc.valInfo.Valcons,
+				}
+			}
 			err = cc.GetValInfo(false)
 			if err != nil {
 				l("❓ refreshing signing info for", cc.ValAddress, err)

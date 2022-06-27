@@ -2,6 +2,7 @@ package tenderduty
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	dash "github.com/blockpane/tenderduty/dashboard"
 	"github.com/go-yaml/yaml"
@@ -44,6 +45,16 @@ type Config struct {
 	chainsMux sync.RWMutex // prevents concurrent map access for Chains
 	// Chains has settings for each validator to monitor. The map's name does not need to match the chain-id.
 	Chains map[string]*ChainConfig `yaml:"chains"`
+}
+
+type savedState struct {
+	Alarms *alarmCache      `json:"alarms"`
+	Blocks map[string][]int `json:"blocks"`
+}
+
+// loading state is best-effort, and doesn't really hurt anything if it fails.
+func (c *Config) loadState(statefile string) {
+	// TODO!
 }
 
 // ChainConfig represents a validator to be monitored on a chain, it is somewhat of a misnomer since multiple
@@ -245,8 +256,16 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 	return
 }
 
+//go:embed example-config.yml
+var defaultConfig []byte
+
 // loadConfig creates a new Config from a file.
-func loadConfig(yamlFile string) (*Config, error) {
+func loadConfig(yamlFile string, dumpDefault bool) (*Config, error) {
+	if dumpDefault {
+		fmt.Println(string(defaultConfig))
+		os.Exit(0)
+	}
+
 	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0644)
 	if e != nil {
 		return nil, e

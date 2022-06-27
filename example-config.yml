@@ -1,7 +1,6 @@
 ---
 
 # controls whether the dashboard is enabled.
-# Alpha version warning: if this is disabled there is almost a 100% chance of triggering a deadlock bug.
 enable_dashboard: yes
 # What TCP port the dashboard will listen on. Only the port is controllable for now.
 listen_port: 8888
@@ -20,7 +19,7 @@ prometheus_listen_port: 28686
 # Global setting for pagerduty
 pagerduty:
   # Should we use PD? Be aware that if this is set to no it overrides individual chain alerting settings.
-  enabled: yes
+  enabled: no
   # This is an API key, not oauth token, more details to follow, but check the v1 docs for more info
   api_key: aaaaaaaaaaaabbbbbbbbbbbbbcccccccccccc
   # Not currently used, but will be soon. This allows setting escalation priorities etc.
@@ -47,7 +46,7 @@ telegram:
 chains:
 
   # The user-friendly name that will be used for labels. Highly suggest wrapping in quotes.
-  "osmosis":
+  "Osmosis":
     # chain_id is validated for a match when connecting to an RPC endpoint, also used as a label in several places.
     chain_id: osmosis-1
     # Hooray, in v2 we derive the valcons from abci queries so you don't have to jump through hoops to figure out how
@@ -78,15 +77,15 @@ chains:
       # Not used yet, pagerduty routing hint
       percentage_priority: warning
 
-      # Not used yet, very soon! Should an alert be sent if the validator is not in the active set ie, jailed,
+      # Should an alert be sent if the validator is not in the active set ie, jailed,
       # tombstoned, unbonding?
       alert_if_inactive: yes
-      # Should an alert be sent if no RPC servers are responding?
+      # Should an alert be sent if no RPC servers are responding? (Note this alarm is instantaneous with no delay)
       alert_if_no_servers: yes
 
       # for this *specific* chain, we can disable alerts to various services. For now you are limited to the global
       # alerting endpoints. Maybe later we'll add the ability to override.
-      pagerduty_alerts: yes
+      pagerduty_alerts: no
       discord_alerts: no
       telegram_alerts: no
 

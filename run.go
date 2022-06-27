@@ -1,17 +1,21 @@
 package tenderduty
 
 import (
+	"encoding/json"
 	"fmt"
 	dash "github.com/blockpane/tenderduty/dashboard"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
 var td = &Config{}
 
-func Run(configFile string) error {
+func Run(configFile, stateFile string, dumpConfig bool) error {
 	var err error
-	td, err = loadConfig(configFile)
+	td, err = loadConfig(configFile, dumpConfig)
 	if err != nil {
 		return err
 	}
@@ -104,7 +108,59 @@ func Run(configFile string) error {
 			}
 		}(cc, k)
 	}
+
+	// attempt to save state on exit, only a best-effort ...
+	saved := make(chan interface{})
+	go saveOnExit(stateFile, saved)
+
 	<-td.ctx.Done()
+	<-saved
 
 	return err
+}
+
+func saveOnExit(stateFile string, saved chan interface{}) {
+	quitting := make(chan os.Signal, 1)
+	signal.Notify(quitting, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
+
+	saveState := func() {
+		defer close(saved)
+		log.Println("saving state...")
+		f, e := os.OpenFile(stateFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+		if e != nil {
+			log.Println(e)
+			return
+		}
+		defer f.Close()
+		td.chainsMux.Lock()
+		defer td.chainsMux.Unlock()
+		blocks := make(map[string][]int)
+		// only need to save counts if the dashboard exists
+		if td.EnableDash {
+			for k, v := range td.Chains {
+				blocks[k] = v.blocksResults
+			}
+		}
+		b, e := json.Marshal(&savedState{
+			Alarms: alarms,
+			Blocks: blocks,
+		})
+		if e != nil {
+			log.Println(e)
+			return
+		}
+		_, _ = f.Write(b)
+		log.Println("tenderduty exiting.")
+	}
+	for {
+		select {
+		case <-td.ctx.Done():
+			saveState()
+			return
+		case <-quitting:
+			saveState()
+			td.cancel()
+			return
+		}
+	}
 }

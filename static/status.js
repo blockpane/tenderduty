@@ -137,7 +137,7 @@ function updateTable(status) {
 
 let logs = new Array(1);
 function addLogMsg(str) {
-    if (logs.length >= 1000) {
+    if (logs.length >= 256) {
         logs.pop()
     }
     logs.unshift(str)
