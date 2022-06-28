@@ -141,7 +141,9 @@ function addLogMsg(str) {
         logs.pop()
     }
     logs.unshift(str)
-    document.getElementById("logs").innerText = logs.join("\n")
+    if (document.visibilityState !== "hidden") {
+        document.getElementById("logs").innerText = logs.join("\n")
+    }
 }
 
 function connect() {
@@ -149,17 +151,19 @@ function connect() {
     if (location.protocol === "https:") {
         wsProto = "wss://"
     }
-    const socket = new WebSocket(wsProto + location.host + '/ws');
-    //const socket = new WebSocket('ws://127.0.0.1:8888/ws');
-    socket.addEventListener('message', function (event) {
+    const parse = function (event) {
         const msg = JSON.parse(event.data);
         if (msg.msgType === "log"){
             addLogMsg(`${new Date(msg.ts*1000).toLocaleTimeString()} - ${msg.msg}`)
-        } else if (msg.msgType === "update"){
+        } else if (msg.msgType === "update" && document.visibilityState !== "hidden"){
             updateTable(msg)
             drawSeries(msg)
         }
-    });
+        event = null
+    }
+    const socket = new WebSocket(wsProto + location.host + '/ws');
+    //const socket = new WebSocket('ws://127.0.0.1:8888/ws');
+    socket.addEventListener('message', function (event) {parse(event)});
     socket.onclose = function(e) {
         console.log('Socket is closed, retrying /ws ...', e.reason);
         addLogMsg('Socket is closed, retrying /ws ...' + e.reason)

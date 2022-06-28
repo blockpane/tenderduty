@@ -42,7 +42,6 @@ function fix_dpi(id) {
     gridW = w * dpi.valueOf()
     gridTextMax = textMax * dpi.valueOf()
     gridTextW = textW * dpi.valueOf()
-    //console.log("scaling is "+dpi.valueOf())
     let style = {
         height() {
             return +getComputedStyle(canvas).getPropertyValue('height').slice(0,-2);
@@ -59,7 +58,6 @@ function fix_dpi(id) {
 function legend() {
     const l = document.getElementById("legend")
     l.height = scale * h * 1.2
-    //const scale = fix_dpi("legend")
     const ctx = l.getContext('2d')
 
     let offset = textW
@@ -183,11 +181,12 @@ function drawSeries(multiStates) {
                     default:
                         grad.addColorStop(0, 'rgba(127,127,127,0.3)');
                 }
+                ctx.clearRect((i*gridW)+gridTextW, gridH+(gridH*j), gridW, gridH)
                 ctx.fillStyle = grad
                 ctx.fillRect((i*gridW)+gridTextW, gridH+(gridH*j), gridW, gridH)
-                ctx.beginPath();
 
                 // line between rows
+                ctx.beginPath();
                 ctx.moveTo((i*gridW)-gridW+gridTextW, 2*gridH+(gridH*j)-0.5)
                 ctx.lineTo((i*gridW*2)+gridTextW, 2*gridH+(gridH*j)-0.5);
                 ctx.closePath();
