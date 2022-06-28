@@ -21,6 +21,7 @@ function lightMode() {
         document.getElementById('canvasDiv').className = "uk-width-expand uk-overflow-auto uk-background-secondary"
         document.getElementById("tableDiv").className = "uk-padding-small uk-text-small uk-background-secondary uk-overflow-auto"
         document.getElementById("legendContainer").className = "uk-nav-center uk-background-secondary uk-padding-remove"
+        document.getElementById("logs").style = "background: #080808; height: 300px;"
 
         return
     }
@@ -30,6 +31,7 @@ function lightMode() {
     document.getElementById('canvasDiv').className = "uk-width-expand uk-overflow-auto uk-background-default"
     document.getElementById("tableDiv").className = "uk-padding-small uk-text-small uk-background-default uk-overflow-auto"
     document.getElementById("legendContainer").className = "uk-nav-center uk-background-default uk-padding-remove"
+    document.getElementById("logs").style = "color: #0a0a0a; background: #dddddd; height: 300px;"
 }
 
 function fix_dpi(id) {
