@@ -186,13 +186,15 @@ function drawSeries(multiStates) {
                 ctx.fillRect((i*gridW)+gridTextW, gridH+(gridH*j), gridW, gridH)
 
                 // line between rows
-                ctx.beginPath();
-                ctx.moveTo((i*gridW)-gridW+gridTextW, 2*gridH+(gridH*j)-0.5)
-                ctx.lineTo((i*gridW*2)+gridTextW, 2*gridH+(gridH*j)-0.5);
-                ctx.closePath();
-                ctx.strokeStyle = 'rgb(51,51,51)'
-                ctx.strokeWidth = '5px;'
-                ctx.stroke();
+                if (i > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo((i * gridW) - gridW + gridTextW, 2 * gridH + (gridH * j) - 0.5)
+                    ctx.lineTo((i * gridW) + gridTextW, 2 * gridH + (gridH * j) - 0.5);
+                    ctx.closePath();
+                    ctx.strokeStyle = 'rgb(51,51,51)'
+                    ctx.strokeWidth = '5px;'
+                    ctx.stroke();
+                }
 
                 // visual differentiation for missed blocks
                 if (crossThrough) {
