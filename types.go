@@ -55,11 +55,6 @@ type savedState struct {
 	Blocks map[string][]int `json:"blocks"`
 }
 
-// loading state is best-effort, and doesn't really hurt anything if it fails.
-func (c *Config) loadState(statefile string) {
-	// TODO!
-}
-
 // ChainConfig represents a validator to be monitored on a chain, it is somewhat of a misnomer since multiple
 // validators can be monitored on a single chain.
 type ChainConfig struct {
@@ -367,6 +362,27 @@ func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
 	for k, v := range saved.Blocks {
 		if c.Chains[k] != nil {
 			c.Chains[k].blocksResults = v
+		}
+	}
+
+	// restore alarm state to prevent duplicate alerts
+	if saved.Alarms != nil {
+		if saved.Alarms.SentTgAlarms != nil {
+			alarms.SentTgAlarms = saved.Alarms.SentTgAlarms
+		}
+		if saved.Alarms.SentPdAlarms != nil {
+			alarms.SentPdAlarms = saved.Alarms.SentPdAlarms
+		}
+		if saved.Alarms.SentDiAlarms != nil {
+			alarms.SentDiAlarms = saved.Alarms.SentDiAlarms
+		}
+		if saved.Alarms.AllAlarms != nil {
+			alarms.AllAlarms = saved.Alarms.AllAlarms
+			for _, alrm := range saved.Alarms.AllAlarms {
+				for k := range alrm {
+					l("📂 restored alarm state -", k)
+				}
+			}
 		}
 	}
 
