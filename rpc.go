@@ -12,8 +12,15 @@ import (
 func (cc *ChainConfig) newRpc() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	var anyWorking bool // if healthchecks are running, we will skip to the first known good node.
+	for _, endpoint := range cc.Nodes {
+		anyWorking = anyWorking || !endpoint.down
+	}
 	// grab the first working endpoint
 	for _, endpoint := range cc.Nodes {
+		if anyWorking && endpoint.down {
+			continue
+		}
 		down := func(msg string) {
 			if !endpoint.down {
 				endpoint.down = true
@@ -21,10 +28,17 @@ func (cc *ChainConfig) newRpc() error {
 			}
 			endpoint.lastMsg = msg
 		}
-		cc.client, _ = rpchttp.New(endpoint.Url, "/websocket")
+		var err error
+		cc.client, err = rpchttp.New(endpoint.Url, "/websocket")
+		if err != nil {
+			msg := fmt.Sprintf("❌ could not connect client for %s: (%s) %s", cc.name, endpoint.Url, err)
+			down(msg)
+			l(msg)
+			continue
+		}
 		status, err := cc.client.Status(ctx)
 		if err != nil {
-			msg := fmt.Sprintf("❌ could not start client for %s: (%s) %s", cc.name, endpoint.Url, err)
+			msg := fmt.Sprintf("❌ could not get status for %s: (%s) %s", cc.name, endpoint.Url, err)
 			down(msg)
 			l(msg)
 			continue

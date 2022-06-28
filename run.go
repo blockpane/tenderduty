@@ -103,8 +103,8 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 					l("🛑", cc.ChainId, e)
 				}
 				cc.WsRun()
-				l(cc.ChainId, "🌀 not working! Will restart monitoring in 1 minute")
-				time.Sleep(time.Minute)
+				l(cc.ChainId, "🌀 websocket exited! Restarting monitoring")
+				time.Sleep(5 * time.Second)
 			}
 		}(cc, k)
 	}
