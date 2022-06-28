@@ -43,20 +43,22 @@ const (
 )
 
 type alarmCache struct {
-	SentPdAlarms map[string]time.Time            `json:"sent_pd_alarms"`
-	SentTgAlarms map[string]time.Time            `json:"sent_tg_alarms"`
-	SentDiAlarms map[string]time.Time            `json:"sent_di_alarms"`
-	AllAlarms    map[string]map[string]time.Time `json:"sent_all_alarms"`
-	notifyMux    sync.RWMutex
+	SentPdAlarms   map[string]time.Time            `json:"sent_pd_alarms"`
+	SentTgAlarms   map[string]time.Time            `json:"sent_tg_alarms"`
+	SentDiAlarms   map[string]time.Time            `json:"sent_di_alarms"`
+	AllAlarms      map[string]map[string]time.Time `json:"sent_all_alarms"`
+	flappingAlarms map[string]map[string]time.Time
+	notifyMux      sync.RWMutex
 }
 
 // alarms is used to prevent double notifications. TODO: save on exit / load on start
 var alarms = &alarmCache{
-	SentPdAlarms: make(map[string]time.Time),
-	SentTgAlarms: make(map[string]time.Time),
-	SentDiAlarms: make(map[string]time.Time),
-	AllAlarms:    make(map[string]map[string]time.Time),
-	notifyMux:    sync.RWMutex{},
+	SentPdAlarms:   make(map[string]time.Time),
+	SentTgAlarms:   make(map[string]time.Time),
+	SentDiAlarms:   make(map[string]time.Time),
+	AllAlarms:      make(map[string]map[string]time.Time),
+	flappingAlarms: make(map[string]map[string]time.Time),
+	notifyMux:      sync.RWMutex{},
 }
 
 func shouldNotify(msg *alertMsg, dest notifyDest) bool {
@@ -87,8 +89,21 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 		l(fmt.Sprintf("💜 Resolved     alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 		return true
 	}
-	whichMap[msg.message] = time.Now()
+	// check if the alarm is flapping, if we sent the same alert in the last five minutes, show a warning but don't alert
+	if alarms.flappingAlarms[msg.chain] == nil {
+		alarms.flappingAlarms[msg.chain] = make(map[string]time.Time)
+	}
+
+	// for pagerduty we perform some basic flap detection
+	if dest == pd && msg.pd && alarms.flappingAlarms[msg.chain][msg.message].After(time.Now().Add(-5*time.Minute)) {
+		l("🛑 flapping detected - suppressing pagerduty notification:", msg.chain, msg.message)
+		return false
+	} else if dest == pd && msg.pd {
+		alarms.flappingAlarms[msg.chain][msg.message] = time.Now()
+	}
+
 	l(fmt.Sprintf("🚨 ALERT        new alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
+	whichMap[msg.message] = time.Now()
 	return true
 }
 
@@ -461,8 +476,8 @@ func (cc *ChainConfig) watch() {
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
-					"critical",
-					false,
+					"info",
+					true,
 					&node.Url,
 				)
 			}

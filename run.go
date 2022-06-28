@@ -36,6 +36,10 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 			case alert := <-td.alertChan:
 				go func(msg *alertMsg) {
 					var e error
+					e = notifyPagerduty(msg)
+					if e != nil {
+						l(msg.chain, "error sending alert to pagerduty", e.Error())
+					}
 					e = notifyDiscord(msg)
 					if e != nil {
 						l(msg.chain, "error sending alert to discord", e.Error())
@@ -43,10 +47,6 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 					e = notifyTg(msg)
 					if e != nil {
 						l(msg.chain, "error sending alert to telegram", e.Error())
-					}
-					e = notifyPagerduty(msg)
-					if e != nil {
-						l(msg.chain, "error sending alert to pagerduty", e.Error())
 					}
 				}(alert)
 			case <-td.ctx.Done():
