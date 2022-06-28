@@ -139,12 +139,24 @@ type AlertConfig struct {
 	AlertIfInactive bool `yaml:"alert_if_inactive"`
 	// AlertIfNoServers: should an alert be sent if no servers are reachable?
 	AlertIfNoServers bool `yaml:"alert_if_no_servers"`
+
 	// PagerdutyAlerts: Should pagerduty alerts be sent for this chain? Both 'config.pagerduty.enabled: yes' and this must be set.
+	//deprecated: use Pagerduty.Enabled instead
 	PagerdutyAlerts bool `yaml:"pagerduty_alerts"`
 	// DiscordAlerts: Should discord alerts be sent for this chain? Both 'config.discord.enabled: yes' and this must be set.
+	//deprecated: use Discord.Enabled instead
 	DiscordAlerts bool `yaml:"discord_alerts"`
 	// TelegramAlerts: Should telegram alerts be sent for this chain? Both 'config.telegram.enabled: yes' and this must be set.
+	//deprecated: use Telegram.Enabled instead
 	TelegramAlerts bool `yaml:"telegram_alerts"`
+
+	// chain specific overrides for alert destinations.
+	// Pagerduty configuration values
+	Pagerduty PDConfig `yaml:"pagerduty"`
+	// Discord webhook information
+	Discord DiscordConfig `yaml:"discord"`
+	// Telegram webhook information
+	Telegram TeleConfig `yaml:"telegram"`
 }
 
 // NodeConfig holds the basic information for a node to connect to.
@@ -223,19 +235,49 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		}
 
 		v.valInfo = &ValInfo{Moniker: "not connected"}
+
+		// the bools for enabling alerts are deprecated with full configs preferred,
+		// don't break if someone is still using them:
+		if v.Alerts.DiscordAlerts && !v.Alerts.Discord.Enabled {
+			v.Alerts.Discord.Enabled = true
+		}
+		if v.Alerts.TelegramAlerts && !v.Alerts.Telegram.Enabled {
+			v.Alerts.Telegram.Enabled = true
+		}
+		if v.Alerts.PagerdutyAlerts && !v.Alerts.Pagerduty.Enabled {
+			v.Alerts.Pagerduty.Enabled = true
+		}
+
+		// if the settings are blank, copy in the defaults:
+		if v.Alerts.Discord.Webhook == "" {
+			v.Alerts.Discord.Webhook = c.Discord.Webhook
+			v.Alerts.Discord.Mentions = c.Discord.Mentions
+		}
+		if v.Alerts.Telegram.ApiKey == "" {
+			v.Alerts.Telegram.ApiKey = c.Telegram.ApiKey
+			v.Alerts.Telegram.Mentions = c.Telegram.Mentions
+		}
+		if v.Alerts.Telegram.Channel == "" {
+			v.Alerts.Telegram.Channel = c.Telegram.Channel
+		}
+		if v.Alerts.Pagerduty.ApiKey == "" {
+			v.Alerts.Pagerduty.ApiKey = c.Pagerduty.ApiKey
+			v.Alerts.Pagerduty.DefaultSeverity = c.Pagerduty.DefaultSeverity
+		}
+
 		switch true {
-		case v.Alerts.DiscordAlerts && !c.Discord.Enabled:
+		case v.Alerts.Discord.Enabled && !c.Discord.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %s is configured for discord alerts, but it is not enabled", k))
 			fallthrough
-		case v.Alerts.PagerdutyAlerts && !c.Pagerduty.Enabled:
+		case v.Alerts.Pagerduty.Enabled && !c.Pagerduty.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %s is configured for pagerduty alerts, but it is not enabled", k))
 			fallthrough
-		case v.Alerts.TelegramAlerts && !c.Telegram.Enabled:
+		case v.Alerts.Telegram.Enabled && !c.Telegram.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %s is configured for telegram alerts, but it is not enabled", k))
 		case !v.Alerts.ConsecutiveAlerts && !v.Alerts.PercentageAlerts && !v.Alerts.AlertIfInactive && !v.Alerts.AlertIfNoServers:
 			problems = append(problems, fmt.Sprintf("warn: %s has no alert types configured", k))
 			fallthrough
-		case !v.Alerts.PagerdutyAlerts && !v.Alerts.DiscordAlerts && !v.Alerts.TelegramAlerts:
+		case !v.Alerts.Pagerduty.Enabled && !v.Alerts.Discord.Enabled && !v.Alerts.Telegram.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %s has no notifications configured", k))
 		}
 		if td.EnableDash {

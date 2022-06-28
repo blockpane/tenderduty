@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// newRpc sets up the rpc client used for monitoring. It will try nodes in order until a working node is found.
+// it will also get some initial info on the validator's status.
 func (cc *ChainConfig) newRpc() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

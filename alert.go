@@ -244,20 +244,20 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 	}
 	c.chainsMux.RLock()
 	a := &alertMsg{
-		pd:           c.Pagerduty.Enabled && c.Chains[chainName].Alerts.PagerdutyAlerts,
-		disc:         c.Discord.Enabled && c.Chains[chainName].Alerts.DiscordAlerts,
-		tg:           c.Telegram.Enabled && c.Chains[chainName].Alerts.TelegramAlerts,
+		pd:           c.Pagerduty.Enabled && c.Chains[chainName].Alerts.Pagerduty.Enabled,
+		disc:         c.Discord.Enabled && c.Chains[chainName].Alerts.Discord.Enabled,
+		tg:           c.Telegram.Enabled && c.Chains[chainName].Alerts.Telegram.Enabled,
 		severity:     severity,
 		resolved:     resolved,
 		chain:        chainName,
 		message:      message,
 		uniqueId:     uniq,
-		key:          c.Pagerduty.ApiKey,
-		tgChannel:    c.Telegram.Channel,
-		tgKey:        c.Telegram.ApiKey,
-		tgMentions:   strings.Join(c.Telegram.Mentions, " "),
-		discHook:     c.Discord.Webhook,
-		discMentions: strings.Join(c.Discord.Mentions, " "),
+		key:          c.Chains[chainName].Alerts.Pagerduty.ApiKey,
+		tgChannel:    c.Chains[chainName].Alerts.Telegram.Channel,
+		tgKey:        c.Chains[chainName].Alerts.Telegram.ApiKey,
+		tgMentions:   strings.Join(c.Chains[chainName].Alerts.Telegram.Mentions, " "),
+		discHook:     c.Chains[chainName].Alerts.Discord.Webhook,
+		discMentions: strings.Join(c.Chains[chainName].Alerts.Discord.Mentions, " "),
 	}
 	c.alertChan <- a
 	c.chainsMux.RUnlock()

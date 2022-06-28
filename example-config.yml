@@ -83,11 +83,24 @@ chains:
       # Should an alert be sent if no RPC servers are responding? (Note this alarm is instantaneous with no delay)
       alert_if_no_servers: yes
 
-      # for this *specific* chain, we can disable alerts to various services. For now you are limited to the global
-      # alerting endpoints. Maybe later we'll add the ability to override.
-      pagerduty_alerts: no
-      discord_alerts: no
-      telegram_alerts: no
+      # for this *specific* chain it's possible to override alert settings. If the api_key or webhook addresses are empty,
+      # the global settings will be used. Note, enabled must be set both globally and for each chain.
+
+      # Chain specific setting for pagerduty
+      pagerduty:
+        enabled: yes
+        api_key: "" # uses default if blank
+
+      # Discord settings
+      discord:
+        enabled: yes
+        webhook: "" # uses default if blank
+
+      # Telegram settings
+      telegram:
+        enabled: yes
+        api_key: "" # uses default if blank
+        channel: "" # uses default if blank
 
     # This section covers our RPC providers. No LCD (aka REST) endpoints are used, only TM's RPC endpoints
     # Multiple hosts are encouraged, and will be tried sequentially until a working endpoint is discovered.
