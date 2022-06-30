@@ -98,9 +98,6 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 					continue
 				}
 				_ = cast.Send(j)
-
-			default:
-				continue
 			}
 		}
 	}()
