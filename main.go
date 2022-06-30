@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
-	tenderduty "github.com/blockpane/tenderduty/td2"
+	td2 "github.com/blockpane/tenderduty/td2"
 	"log"
 	"os"
 )
@@ -25,7 +25,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := tenderduty.Run(configFile, stateFile, dumpConfig)
+	err := td2.Run(configFile, stateFile, dumpConfig)
 	if err != nil {
 		log.Println(err.Error(), "... exiting.")
 	}
