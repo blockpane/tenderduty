@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// ValInfo holds most of the stats/info used for secondary alarms. It is refreshed roughly every minute.
 type ValInfo struct {
 	Moniker    string `json:"moniker"`
 	Bonded     bool   `json:"bonded"`
@@ -24,6 +25,7 @@ type ValInfo struct {
 	Valcons    string `json:"valcons"`
 }
 
+// GetValInfo the first bool is used to determine if extra information about the validator should be printed.
 func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 	if cc.client == nil {
 		return errors.New("nil rpc client")
@@ -34,6 +36,7 @@ func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 	if cc.valInfo == nil {
 		cc.valInfo = &ValInfo{}
 	}
+
 	// Fetch info from /cosmos.staking.v1beta1.Query/Validator
 	// it's easier to ask people to provide valoper since it's readily available on
 	// explorers, so make it easy and lookup the consensus key for them.
@@ -46,17 +49,28 @@ func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 	} else if first && !cc.valInfo.Bonded {
 		l(fmt.Sprintf("❌ %s (%s) is INACTIVE", cc.ValAddress, cc.valInfo.Moniker))
 	}
-	// need to know the prefix for when we serialize the slashing info query, this might be too fragile.
+
+	// need to know the prefix for when we serialize the slashing info query, this is too fragile.
+	// for now, we perform specific chain overrides based on known values because the valoper is used
+	// in so many places.
+	var prefix string
 	split := strings.Split(cc.ValAddress, "valoper")
 	if len(split) != 2 {
-		err = errors.New("❓ could not determine bech32 prefix from valoper address: " + cc.ValAddress)
-		return
-	}
-
-	prefix := split[0] + "valcons"
-	cc.valInfo.Valcons, err = bech32.ConvertAndEncode(prefix, cc.valInfo.Conspub[:20])
-	if err != nil {
-		return
+		if pre, ok := altValopers.getAltPrefix(cc.ValAddress); ok {
+			cc.valInfo.Valcons, err = bech32.ConvertAndEncode(pre, cc.valInfo.Conspub[:20])
+			if err != nil {
+				return
+			}
+		} else {
+			err = errors.New("❓ could not determine bech32 prefix from valoper address: " + cc.ValAddress)
+			return
+		}
+	} else {
+		prefix = split[0] + "valcons"
+		cc.valInfo.Valcons, err = bech32.ConvertAndEncode(prefix, cc.valInfo.Conspub[:20])
+		if err != nil {
+			return
+		}
 	}
 	if first {
 		l("⚙️", cc.ValAddress[:20], "... is using consensus key:", cc.valInfo.Valcons)
@@ -116,6 +130,7 @@ func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 	return
 }
 
+// getVal returns the public key, moniker, and if the validator is jailed.
 func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []byte, moniker string, jailed, bonded bool, err error) {
 	q := staking.QueryValidatorRequest{
 		ValidatorAddr: valoper,

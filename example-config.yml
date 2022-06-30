@@ -52,7 +52,8 @@ chains:
     # Hooray, in v2 we derive the valcons from abci queries so you don't have to jump through hoops to figure out how
     # to convert ed25519 keys to the appropriate bech32 address
     valoper_address: osmovaloper1xxxxxxx...
-    # NOT USED (yet) Should the monitor revert to using public API endpoints if all supplied RCP nodes fail?
+    # Should the monitor revert to using public API endpoints if all supplied RCP nodes fail?
+    # This isn't always reliable, not all public nodes have websocket proxying setup correctly.
     public_fallback: no
 
     # Controls various alert settings for each chain.

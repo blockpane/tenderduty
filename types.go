@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,18 +32,25 @@ type Config struct {
 	// EnableDash enables the web dashboard
 	EnableDash bool `yaml:"enable_dashboard"`
 	// Listen is the URL for the dashboard to listen on, must be a valid/parsable URL
-	Listen      string `yaml:"listen_port"`
-	HideLogs    bool   `yaml:"hide_logs"`
-	NodeDownMin int    `yaml:"node_down_alert_minutes"`
+	Listen string `yaml:"listen_port"`
+	// HideLogs controls whether logs are sent to the dashboard. It will also suppress many alarm details.
+	// This is useful if the dashboard will be public.
+	HideLogs bool `yaml:"hide_logs"`
 
-	Prom                 bool `yaml:"prometheus_enabled"`
-	PrometheusListenPort int  `yaml:"prometheus_listen_port"`
+	// NodeDownMin controls how long we wait before sending an alert that a node is not responding or has
+	// fallen behind.
+	NodeDownMin int `yaml:"node_down_alert_minutes"`
+
+	// Prom controls if the prometheus exporter is enabled.
+	Prom bool `yaml:"prometheus_enabled"`
+	// PrometheusListenPort is the port number used by the prometheus web server
+	PrometheusListenPort int `yaml:"prometheus_listen_port"`
 
 	// Pagerduty configuration values
 	Pagerduty PDConfig `yaml:"pagerduty"`
 	// Discord webhook information
 	Discord DiscordConfig `yaml:"discord"`
-	// Telegram webhook information
+	// Telegram api information
 	Telegram TeleConfig `yaml:"telegram"`
 
 	chainsMux sync.RWMutex // prevents concurrent map access for Chains
@@ -50,6 +58,8 @@ type Config struct {
 	Chains map[string]*ChainConfig `yaml:"chains"`
 }
 
+// savedState is dumped to a JSON file at exit time, and is loaded at start. If successful it will prevent
+// duplicate alerts, and will show old blocks in the dashboard.
 type savedState struct {
 	Alarms *alarmCache      `json:"alarms"`
 	Blocks map[string][]int `json:"blocks"`
@@ -85,6 +95,8 @@ type ChainConfig struct {
 	// ValAddress is the validator operator address to be monitored. Tenderduty v1 required the consensus address,
 	// this is no longer needed. The operator address is much easier to find in explorers etc.
 	ValAddress string `yaml:"valoper_address"`
+	// ValconsOverride allows skipping the lookup of the consensus public key and setting it directly.
+	ValconsOverride string `yaml:"valcons_override"`
 	// ExtraInfo will be appended to the alert data. This is useful for pagerduty because multiple tenderduty instances
 	// can be pointed at pagerduty and duplicate alerts will be filtered by using a key. The first alert will win, this
 	// can be useful for knowing what tenderduty instance sent the alert.
@@ -93,11 +105,12 @@ type ChainConfig struct {
 	Alerts AlertConfig `yaml:"alerts"`
 	// PublicFallback determines if tenderduty should attempt to use public RPC endpoints in the situation that not
 	// explicitly defined RPC servers are available. Not recommended.
-	PublicFallback bool `yaml:"public_fallback"` // FIXME not used
+	PublicFallback bool `yaml:"public_fallback"`
 	// Nodes defines what RPC servers to connect to.
 	Nodes []*NodeConfig `yaml:"nodes"`
 }
 
+// mkUpdate returns the info needed by prometheus for a gauge.
 func (cc *ChainConfig) mkUpdate(t metricType, v float64, node string) *promUpdate {
 	return &promUpdate{
 		metric:   t,
@@ -218,6 +231,7 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		// TODO
 	}
 
+	var wantsPublic bool
 	for k, v := range c.Chains {
 		if v.blocksResults == nil {
 			v.blocksResults = make([]int, showBLocks)
@@ -227,6 +241,9 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		}
 		if v.name == "" {
 			v.name = k
+		}
+		if v.PublicFallback {
+			wantsPublic = true
 		}
 
 		v.valInfo = &ValInfo{Moniker: "not connected"}
@@ -293,6 +310,24 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			}
 		}
 	}
+
+	// if public endpoints are enabled we do our best to keep the list refreshed. Immediate, then every 12 hours.
+	if wantsPublic {
+		go func() {
+			e := refreshRegistry()
+			if e != nil {
+				l("could not fetch chain registry paths, using defaults")
+			}
+			for {
+				time.Sleep(12 * time.Hour)
+				l("refreshing cosmos.registry paths")
+				e = refreshRegistry()
+				if e != nil {
+					l("could not refresh registry paths -", e)
+				}
+			}
+		}()
+	}
 	return
 }
 
@@ -355,10 +390,6 @@ func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
 	if e != nil {
 		l("could not unmarshal saved state", e.Error())
 	}
-	// FIXME
-	if saved.Alarms != nil {
-		// restore alarm state
-	}
 	for k, v := range saved.Blocks {
 		if c.Chains[k] != nil {
 			c.Chains[k].blocksResults = v
@@ -380,6 +411,13 @@ func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
 			alarms.AllAlarms = saved.Alarms.AllAlarms
 			for _, alrm := range saved.Alarms.AllAlarms {
 				for k := range alrm {
+					if alrm[k].Before(time.Now().Add(-24 * time.Hour)) {
+						l("📁 not restoring old alarm (>24 hours) from cache -", k)
+						continue
+					} else if strings.HasPrefix(k, "no RPC endpoints are working") {
+						// silently skip the no nodes available alarms
+						delete(alrm, k)
+					}
 					l("📂 restored alarm state -", k)
 				}
 			}

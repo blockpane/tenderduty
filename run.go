@@ -85,8 +85,8 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 			// node health checks:
 			go func() {
 				for {
-					cc.monitorHealth(td.ctx, name)
 					time.Sleep(time.Minute)
+					cc.monitorHealth(td.ctx, name)
 				}
 			}()
 

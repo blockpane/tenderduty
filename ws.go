@@ -21,6 +21,8 @@ const (
 	QueryVote     string = `tm.event='Vote'`
 )
 
+// StatusType represents the various possible end states. Prevote and Precommit are special cases, where the node
+// monitoring for misses did see them, but the proposer did not include in the block.
 type StatusType int
 
 const (
@@ -31,12 +33,16 @@ const (
 	StatusProposed
 )
 
+// StatusUpdate is passed over a channel from the websocket client indicating the current state, it is immediate in the
+// case of prevotes etc, and the highest value seen is used in the final determination (which is how we tag
+// prevote/precommit + missed blocks.
 type StatusUpdate struct {
 	Height int64
 	Status StatusType
 	Final  bool
 }
 
+// WsReply is a trimmed down version of the JSON sent from a tendermint websocket subscription.
 type WsReply struct {
 	Id     int64 `json:"id"`
 	Result struct {
@@ -48,10 +54,12 @@ type WsReply struct {
 	} `json:"result"`
 }
 
+// Type is the abci message type
 func (wsr WsReply) Type() string {
 	return wsr.Result.Data.Type
 }
 
+// Value returns the JSON encoded raw bytes from the response. Unlike an ABCI RPC query, these are not protobuf.
 func (wsr WsReply) Value() []byte {
 	if wsr.Result.Data.Value == nil {
 		return make([]byte, 0)
@@ -59,6 +67,8 @@ func (wsr WsReply) Value() []byte {
 	return wsr.Result.Data.Value
 }
 
+// WsRun is our main entrypoint for the websocket listener. In the Run loop it will block, and if it exits force a
+// renegotiation for a new client.
 func (cc *ChainConfig) WsRun() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -89,6 +99,8 @@ func (cc *ChainConfig) WsRun() {
 		log.Println(err)
 	}
 
+	// This go func processes the results returned by the listeners. It has most of the logic on where data is sent,
+	// like dashboards or prometheus.
 	resultChan := make(chan StatusUpdate)
 	go func() {
 		var signState StatusType = -1
@@ -199,6 +211,7 @@ func (cc *ChainConfig) WsRun() {
 		}
 	}()
 
+	// now that channel consumers are up, create our subscriptions and route data.
 	go func() {
 		var msg []byte
 		var e error
@@ -247,6 +260,7 @@ func (cc *ChainConfig) WsRun() {
 
 type stringInt64 string
 
+// helper to make the "everything is a string" issue less painful.
 func (si stringInt64) val() int64 {
 	i, _ := strconv.ParseInt(string(si), 10, 64)
 	return i
@@ -256,6 +270,7 @@ type signature struct {
 	ValidatorAddress string `json:"validator_address"`
 }
 
+// rawBlock is a trimmed down version of the block subscription result, it contains only what we need.
 type rawBlock struct {
 	Block struct {
 		Header struct {
@@ -268,6 +283,7 @@ type rawBlock struct {
 	} `json:"block"`
 }
 
+// find determines if a validator's pre-commit was included in a finalized block.
 func (rb rawBlock) find(val string) bool {
 	if rb.Block.LastCommit.Signatures == nil {
 		return false
@@ -280,6 +296,8 @@ func (rb rawBlock) find(val string) bool {
 	return false
 }
 
+// handleBlocks consumes the channel for new blocks and when it sees one sends a status update. It's also
+// responsible for stalled chain detection and will shutdown the client if there are no blocks for a minute.
 func handleBlocks(ctx context.Context, blocks chan *WsReply, results chan StatusUpdate, address string) error {
 	live := time.NewTicker(time.Minute)
 	lastBlock := time.Now()
@@ -315,6 +333,7 @@ func handleBlocks(ctx context.Context, blocks chan *WsReply, results chan Status
 	}
 }
 
+// rawVote is a trimmed down version of the vote response.
 type rawVote struct {
 	Vote struct {
 		Type             pbtypes.SignedMsgType `json:"type"`
@@ -323,6 +342,7 @@ type rawVote struct {
 	} `json:"Vote"`
 }
 
+// handleVotes consumes the channel for precommits and prevotes, tracking where in the process a validator is.
 func handleVotes(ctx context.Context, votes chan *WsReply, results chan StatusUpdate, address string) {
 	for {
 		select {
@@ -354,10 +374,13 @@ func handleVotes(ctx context.Context, votes chan *WsReply, results chan StatusUp
 	}
 }
 
+// TmConn is the websocket client. This is probably not necessary since I expected more complexity.
 type TmConn struct {
 	*websocket.Conn
 }
 
+// NewClient returns a websocket client.
+// FIXME: need to handle UDS and insecure TLS
 func NewClient(u string, allowInsecure bool) (*TmConn, error) {
 	// dialUnix is used to determine if the connection is to a UDS and requires a custom dialer.
 	var dialUnix bool
