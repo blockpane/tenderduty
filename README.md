@@ -14,5 +14,12 @@ git checkout feature/v2
 cp example-config.yml config.yml
 # edit config.yml
 go get ./...
-go run main.go
+go install
+~/go/bin/tenderduty
+```
+
+if you'd prefer to containerize, you can also 
+```
+docker-compose up -d 
+docker-compose logs -f
 ```

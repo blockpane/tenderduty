@@ -1,0 +1,21 @@
+# docker-compose example for tenderduty, copy this file to docker-compose.yml and edit to suit.
+version: '3.2'
+services:
+
+  v2:
+    build: .
+    command: ""
+    ports:
+      - "8888:8888"
+    volumes:
+      - home:/var/lib/tenderduty
+      - ./config.yml:/var/lib/tenderduty/config.yml
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "10"
+    restart: unless-stopped
+
+volumes:
+  home:
