@@ -75,15 +75,16 @@ func (cc *ChainConfig) newRpc() error {
 		if msg, failed, syncing := tryUrl(endpoint.Url); failed {
 			endpoint.syncing = syncing
 			down(endpoint, msg)
+			continue
 		}
 		return nil
 	}
 	if cc.PublicFallback {
 		if u, ok := getRegistryUrl(cc.ChainId); ok {
 			node := guessPublicEndpoint(u)
-			l(cc.ChainId, "attemtping to use public fallback node", node)
+			l(cc.ChainId, "⛑ attemtping to use public fallback node", node)
 			if _, kk, _ := tryUrl(node); !kk {
-				l(cc.ChainId, "connected to public endpoint", node)
+				l(cc.ChainId, "⛑ connected to public endpoint", node)
 				return nil
 			}
 		} else {
