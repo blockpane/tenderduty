@@ -3,7 +3,7 @@ package tenderduty
 import (
 	"embed"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/dashboard"
+	dash "github.com/blockpane/tenderduty/td2/dashboard"
 	"log"
 	"os"
 	"strings"

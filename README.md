@@ -23,5 +23,5 @@ git checkout feature/v2
 cp example-config.yml config.yml
 # edit config.yml
 go get ./...
-go run cmd/tenderduty/main.go
+go run main.go
 ```

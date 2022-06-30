@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/dashboard"
+	dash "github.com/blockpane/tenderduty/td2/dashboard"
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"
@@ -331,15 +331,8 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 	return
 }
 
-//go:embed example-config.yml
-var defaultConfig []byte
-
 // loadConfig creates a new Config from a file.
 func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
-	if dumpDefault {
-		fmt.Println(string(defaultConfig))
-		os.Exit(0)
-	}
 
 	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0644)
 	if e != nil {

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/dashboard"
+	dash "github.com/blockpane/tenderduty/td2/dashboard"
 	"github.com/gorilla/websocket"
 	pbtypes "github.com/tendermint/tendermint/proto/tendermint/types"
 	"log"

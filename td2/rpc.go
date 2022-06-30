@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/dashboard"
+	dash "github.com/blockpane/tenderduty/td2/dashboard"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"
 	"net/http"

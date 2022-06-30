@@ -1,10 +1,16 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
-	tenderduty "github.com/blockpane/tenderduty"
+	"fmt"
+	tenderduty "github.com/blockpane/tenderduty/td2"
 	"log"
+	"os"
 )
+
+//go:embed example-config.yml
+var defaultConfig []byte
 
 func main() {
 	var configFile, stateFile string
@@ -13,6 +19,11 @@ func main() {
 	flag.StringVar(&stateFile, "state", ".tenderduty-state.json", "file for storing state between restarts")
 	flag.BoolVar(&dumpConfig, "example-config", false, "print the an example config.yml and exit")
 	flag.Parse()
+
+	if dumpConfig {
+		fmt.Println(string(defaultConfig))
+		os.Exit(0)
+	}
 
 	err := tenderduty.Run(configFile, stateFile, dumpConfig)
 	if err != nil {
