@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+      /*canvas {
+          image-rendering: -moz-crisp-edges;
+          image-rendering: -webkit-crisp-edges;
+          image-rendering: crisp-edges;
+      }*/
+  </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/uikit.min.css" />
+  <title>Tenderduty Dashboard</title>
+  <script src="js/uikit.min.js"></script>
+  <script src="./js/uikit-icons.min.js"></script>
+  <script type="application/javascript" src="grid.js"></script>
+  <script type="application/javascript" src="status.js"></script>
+  <link rel="icon" href="favicon.png">
+</head>
+
+<body class="uk-background-secondary uk-light" onload="loadState(); legend()">
+<div class="uk-container uk-width-expand uk-height-viewport">
+  <div class="uk-width-expand uk-overflow-auto uk-background-secondary" id="canvasDiv">
+    <div style="width: 4835px;" class="uk-padding-remove-horizontal">
+      <canvas id="canvas" height="20" width="4735"></canvas>
+    </div>
+    <div id="legendContainer" class="uk-nav-center uk-background-secondary uk-padding-remove">
+      <canvas id="legend" height="32" width="700"></canvas>
+    </div>
+  </div>
+
+  <div class="uk-padding-small uk-text-small uk-background-secondary uk-overflow-auto" id="tableDiv">
+    <table class="uk-table uk-table-small uk-table-justify uk-padding-remove">
+      <thead>
+      <tr>
+        <th></th>
+        <th>Chain</th>
+        <th>Height</th>
+        <th>Moniker</th>
+        <th style="text-align: center">Bonded</th>
+        <th class="uk-text-center">Uptime</th>
+        <th class="uk-text-center">RPC Nodes</th>
+      </tr>
+      </thead>
+      <tbody id="statusTable"></tbody>
+    </table>
+  </div>
+
+  <div class="uk-padding-large uk-padding-remove-top" id="logContainer">
+    <pre id="logs" class="uk-panel-scrollable uk-resize-vertical" style="background: #080808; height: 300px;"></pre>
+  </div>
+
+  <div class="uk-text-small uk-text-center">
+    <a class="uk-link-muted" onclick="lightMode()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-brightness-high" viewBox="0 0 16 16"><path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z"/></svg></a>
+    <a class="uk-link-muted" href="https://blockpane.com"><img src="bp-logo-text.svg" alt="[ block pane ]" style="height: 24px;"></a>
+    <a href="https://github.com/blockpane/tenderduty"><span uk-icon="github" style="color: grey"></span></a>
+  </div>
+</div>
+</body>
+</html>

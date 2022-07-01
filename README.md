@@ -1,84 +1,55 @@
-# TenderDuty
+# TenderDuty v2
 
-A [PagerDuty](https://github.com/PagerDuty/go-pagerduty) notifier for [Cosmos](https://github.com/cosmos/cosmos-sdk) / [Tendermint](https://github.com/tendermint/tendermint) validators.
+[![Go Reference](https://pkg.go.dev/badge/github.com/blockpane/tenderduty.svg)](https://pkg.go.dev/github.com/blockpane/tenderduty)
+[![Gosec](https://github.com/blockpane/tenderduty/workflows/Gosec/badge.svg)](https://github.com/blockpane/tenderduty/actions?query=workflow%3AGosec)
+[![CodeQL](https://github.com/blockpane/tenderduty/workflows/CodeQL/badge.svg)](https://github.com/blockpane/tenderduty/actions?query=workflow%3ACodeQL)
 
-This will probably only work on Tendermint 0.34.x chains. 
+Tenderduty is a comprehensive monitoring tool for Tendermint chains. Its primary function is to alert a validator if they are missing blocks, and has many other features.
 
-**Note**: The Tendermint client has incomplete support for TLS encrypted websockets, and requires a non-encrypted connection to the RPC endpoint.
+v2 is complete rewrite of the original tenderduty graciously sponsored by the [Osmosis Grants Program](https://grants.osmosis.zone/). This new version adds a web dashboard, prometheus exporter, telegram and discord notifications, multi-chain support, more granular alerting, and more types of alerts.
 
-## Features
+![dashboard screenshot](docs/dash.png)
 
-- Will send an alert if a certain threshold of (consecutive) missed pre-commits are seen.
-- Alerts if the validator leaves the active set.
-- Will resolve the alert once the validator is signing again.
-- Accepts a list of Tendermint RPC endpoints and randomly connects to one (_does not need to run on the validator node._)
+## Documentation
 
-## Install
+The [documentation](docs/README.md) is a work-in-progress.
 
-```shell
-$ git clone https://github.com/blockpane/tenderduty.git
-$ cd tenderduty
-$ go build -ldflags "-s -w" -o tenderduty main.go
+## Runtime options:
+
 ```
-
-## Options
-
-```text
+$ tenderduty -h
 Usage of tenderduty:
-  -c string
-        Required: consensus address (valcons) to monitor '<gaiad> tendermint show-address'
-  -p string
-        Required: pagerduty v2 Events api key (32 characters, alphanumeric)
-  -u string
-        Required: comma seperated list of tendermint RPC urls (http:// or unix://)
-  -reminder int
-        send additional alert every <reminder> blocks if still missing (default 1200)
-  -stalled int
-        alert if minutes since last block exceeds this value (default 10)
-  -threshold int
-        alert threshold for missed precommits (default 3)
-  -label string
-        Additional text to add to the alert title, added after chain ID string
-  -alert-unavailable
-        send a pagerduty alert if no RPC endpoints are available
-  -test
-        send a test alert to pager duty, wait 10 seconds, resolve the incident and exit
+  -example-config
+    	print the an example config.yml and exit
+  -f string
+    	configuration file to use (default "config.yml")
+  -state string
+    	file for storing state between restarts (default ".tenderduty-state.json")
 ```
 
-## Example use
+## Quick start
 
-```shell
-$ tenderduty -c pagevalcons1... -u http://1.2.3.4:26657,http://3.4.5.6:26657 -p efghi...
+30 second quickstart for beta testers:
 
-2021/08/25 14:41:10 main.go:126: connecting to http://1.2.3.4:26657
-2021/08/25 14:41:10 main.go:149: connected to pager-1
-pager-1      | 2021/08/25 14:41:10 main.go:167: found pagevalcons1... in the active validator set.
-pager-1      | 2021/08/25 14:41:10 main.go:199: watching for missed precommits
-pager-1      | 2021/08/25 14:43:13 main.go:225: block 918210
-...
-pager-1      | 2021/08/25 16:35:37 main.go:235: missed a precommit at height: 919268
-pager-1      | 2021/08/25 16:35:45 main.go:235: missed a precommit at height: 919269
-2021/08/25 16:35:51 main.go:87: ALERT validator has missed 3 blocks on pager-1
-pager-1      | 2021/08/25 16:35:51 main.go:235: missed a precommit at height: 919270
-pager-1      | 2021/08/25 16:35:55 main.go:235: missed a precommit at height: 919271
-pager-1      | 2021/08/25 16:36:01 main.go:235: missed a precommit at height: 919272
-pager-1      | 2021/08/25 16:36:08 main.go:235: missed a precommit at height: 919273
-pager-1      | 2021/08/25 16:36:14 main.go:235: missed a precommit at height: 919274
-pager-1      | 2021/08/25 16:36:20 main.go:235: missed a precommit at height: 919275
-2021/08/25 16:36:26 main.go:87: RESOLVED validator is signing blocks on pager-1
-pager-1      | 2021/08/25 16:37:55 main.go:225: block 919290
-pager-1      | 2021/08/25 16:41:05 main.go:225: block 919320
+if you'd prefer to containerize and not build locally, you can:
+
+```
+mkdir tenderduty && cd tenderduty
+docker run --rm ghcr.io/blockpane/tenderduty:latest -example-config >config.yml
+# edit config.yml and add chains, notification methods etc.
+docker run -d --name tenderduty -p "8888:8888" -p "28686:28686" --restart unless-stopped -v $(pwd)/config.yml:/var/lib/tenderduty/config.yml ghcr.io/blockpane/tenderduty:latest
+docker logs -f --tail 20 tenderduty
 ```
 
-### To find your consensus address (valcons)
+Or if building from source:
 
-```shell
-gaiad tendermint show-address
 ```
-
-### To find your pagerduty integration key
-
-- Within PagerDuty, go to Services --> Service Directory --> New Service
-- Give your service a name, select an escalation policy, and set an alert grouping preference
-- Select the PagerDuty Events API V2 Integration, hit Create Service
-- Copy the 32 character `Integration Key` on the tenderduty command line
+git clone https://github.com/blockpane/tenderduty
+cd tenderduty
+git checkout release/v2
+cp example-config.yml config.yml
+# edit config.yml
+go get ./...
+go install
+~/go/bin/tenderduty
+```

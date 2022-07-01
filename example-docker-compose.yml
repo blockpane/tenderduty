@@ -1,12 +1,16 @@
----
 # docker-compose example for tenderduty, copy this file to docker-compose.yml and edit to suit.
 version: '3.2'
 services:
 
-# to watch multiple chains, just create a service for each one, and add the correct flags
-  osmosis:
+  v2:
     build: .
-    command: "-c osmovalcons1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -u http://10.10.10.10:26657,http://192.168.1.1:26657 -p abcdef..."
+    command: ""
+    ports:
+      - "8888:8888" # Dashboard
+      - "28686:28686" # Prometheus exporter
+    volumes:
+      - home:/var/lib/tenderduty
+      - ./config.yml:/var/lib/tenderduty/config.yml
     logging:
       driver: "json-file"
       options:
@@ -14,12 +18,5 @@ services:
         max-file: "10"
     restart: unless-stopped
 
-  sifchain:
-    build: .
-    command: "-c sifvalcons1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb -u http://10.10.10.11:26657 -p abcdef..."
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "10"
-    restart: unless-stopped
+volumes:
+  home:

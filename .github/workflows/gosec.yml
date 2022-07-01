@@ -1,0 +1,25 @@
+---
+name: Gosec
+on:
+  push:
+    branches:
+      - master
+      - release/*
+      - develop
+  pull_request:
+    branches:
+      - master
+      - release/v2
+      - develop
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v2
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
