@@ -334,17 +334,18 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 // loadConfig creates a new Config from a file.
 func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
 
-	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0644)
+	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
 	if e != nil {
 		return nil, e
 	}
-	defer f.Close()
 	i, e := f.Stat()
 	if e != nil {
+		_ = f.Close()
 		return nil, e
 	}
 	b := make([]byte, int(i.Size()))
 	_, e = f.Read(b)
+	_ = f.Close()
 	if e != nil {
 		return nil, e
 	}
@@ -369,12 +370,13 @@ func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
 		notifyMux:    sync.RWMutex{},
 	}
 
+	/* #nosec */
 	sf, e := os.OpenFile(stateFile, os.O_RDONLY, 0600)
 	if e != nil {
 		l("could not load saved state", e.Error())
 	}
-	defer sf.Close()
 	b, e = io.ReadAll(sf)
+	_ = sf.Close()
 	if e != nil {
 		l("could not read saved state", e.Error())
 	}

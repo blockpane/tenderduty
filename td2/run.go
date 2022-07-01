@@ -126,12 +126,12 @@ func saveOnExit(stateFile string, saved chan interface{}) {
 	saveState := func() {
 		defer close(saved)
 		log.Println("saving state...")
+		/* #nosec */
 		f, e := os.OpenFile(stateFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 		if e != nil {
 			log.Println(e)
 			return
 		}
-		defer f.Close()
 		td.chainsMux.Lock()
 		defer td.chainsMux.Unlock()
 		blocks := make(map[string][]int)
@@ -150,6 +150,7 @@ func saveOnExit(stateFile string, saved chan interface{}) {
 			return
 		}
 		_, _ = f.Write(b)
+		_ = f.Close()
 		log.Println("tenderduty exiting.")
 	}
 	for {
