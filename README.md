@@ -12,7 +12,7 @@ v2 is complete rewrite of the original tenderduty graciously sponsored by the [O
 
 ## Documentation
 
-Documentation is a work-in-progress. For now only the [config settings](docs/config.md) are covered.
+The [documentation](docs/README.md) is a work-in-progress.
 
 ## Runtime options:
 
