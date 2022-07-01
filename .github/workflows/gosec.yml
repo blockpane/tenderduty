@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - master
-      - release/v2
+      - release/*
+      - develop
   pull_request:
     branches:
       - master
       - release/v2
+      - develop
 jobs:
   tests:
     runs-on: ubuntu-latest

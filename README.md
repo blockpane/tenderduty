@@ -9,8 +9,22 @@ TenderDuty v2 is complete rewrite of the original tenderduty graciously sponsore
 
 Documentation will be provided soon. The example-config.yml file is well-commented.
 
-30 second quickstart for beta testers:
+## Runtime options:
 
+```
+$ tenderduty -h
+Usage of tenderduty:
+  -example-config
+    	print the an example config.yml and exit
+  -f string
+    	configuration file to use (default "config.yml")
+  -state string
+    	file for storing state between restarts (default ".tenderduty-state.json")
+```
+
+## Quick start
+
+30 second quickstart for beta testers:
 
 if you'd prefer to containerize and not build locally, you can:
 
