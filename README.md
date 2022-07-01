@@ -11,19 +11,26 @@ Documentation will be provided soon. The example-config.yml file is well-comment
 
 30 second quickstart for beta testers:
 
+
+if you'd prefer to containerize and not build locally, you can:
+
 ```
-git clone https://github.com/blockpane/tenderduty
-cd tenderduty
-git checkout feature/v2
-cp example-config.yml config.yml
-# edit config.yml
-go get ./...
-go install
-~/go/bin/tenderduty
+$ mkdir tenderduty && cd tenderduty
+$ docker run --rm ghcr.io/blockpane/tenderduty:release-v2 -example-config >config.yml
+# edit config.yml and add chains, notification methods etc.
+$ docker run -d --name tenderduty -p "8888:8888" --restart unless-stopped -v $(pwd)/config.yml:/var/lib/tenderduty/config.yml ghcr.io/blockpane/tenderduty:release-v2
+$ docker logs -f --tail 20 tenderduty
 ```
 
-if you'd prefer to containerize, you can also 
+Or if building from source:
+
 ```
-docker-compose up -d 
-docker-compose logs -f
+$ git clone https://github.com/blockpane/tenderduty
+$ cd tenderduty
+$ git checkout feature/v2
+$ cp example-config.yml config.yml
+# edit config.yml
+$ go get ./...
+$ go install
+$ ~/go/bin/tenderduty
 ```
