@@ -126,7 +126,7 @@ func saveOnExit(stateFile string, saved chan interface{}) {
 	saveState := func() {
 		defer close(saved)
 		log.Println("saving state...")
-		/* #nosec */
+		//#nosec -- variable specified on command line
 		f, e := os.OpenFile(stateFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 		if e != nil {
 			log.Println(e)
