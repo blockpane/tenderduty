@@ -27,7 +27,7 @@ Or if building from source:
 ```
 $ git clone https://github.com/blockpane/tenderduty
 $ cd tenderduty
-$ git checkout feature/v2
+$ git checkout release/v2
 $ cp example-config.yml config.yml
 # edit config.yml
 $ go get ./...
