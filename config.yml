@@ -1,0 +1,229 @@
+---
+
+enable_dashboard: yes
+listen_port: 8888
+hide_logs: no
+node_down_alert_minutes: 10
+
+prometheus_enabled: yes
+prometheus_listen_port: 28686
+
+pagerduty:
+  enabled: no
+  api_key: aaaaaaaaaaaabbbbbbbbbbbbbcccccccccccc
+  default_severity: alert
+
+discord:
+  enabled: no
+  webhook: https://discord.com/api/webhooks/990063517619089448/TWM87Dv8FXYARaTO2DtVeKa0_OkS7wSC9rfIXRcoVFBihPocgJEil_8wyoegmvMiyd1H
+
+telegram:
+  enabled: yes
+  api_key: '5540663245:AAHO0b0H0Yomd1OvVOYs3e4FN4LvUfojLI0'
+  channel: "-664287467"
+
+chains:
+
+  "Osmosis":
+    chain_id: osmosis-1
+    #valoper_address: osmovaloper1z0sh4s80u99l6y9d3vfy582p8jejeeu6tcucs2
+    valoper_address: osmovaloper1y0us8xvsvfvqkk9c6nt5cfyu5au5tww24nrlnx
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 1
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      #- url: http://fail:26657
+      #  alert_if_down: yes
+      - url: http://ny3:26657
+        alert_if_down: yes
+      - url: http://lon:56657
+        alert_if_down: yes
+      - url: http://hel4:20657
+        alert_if_down: yes
+
+  "SecretNetwork":
+    chain_id: secret-4
+    #valoper_address: secretvaloper1tmtcu980raqvypdf0dd6hsgh6qcm7ex7l29u58
+    valoper_address: secretvaloper1utjz56dymhnu97jdzy8rhpwp9y97pt7duaa5ut
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 10
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: https://scrt-rpc.blockpane.com:443
+        alert_if_down: yes
+      - url: http://vin2:26657
+        alert_if_down: yes
+
+  "Junø":
+    chain_id: juno-1
+    #valoper_address: junovaloper1sgghjqdrj9kujkx38q04d99qsljwfd6mxyrssk
+    valoper_address: junovaloper175q6smvgnuec5e62rs4chnu5cs8d98q2e4l6cl
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 2
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 3
+      percentage_priority: warning
+      percentage_enabled: yes
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: http://fra:26657
+        alert_if_down: yes
+      - url: http://hel4:26657
+        alert_if_down: yes
+      - url: http://lon:36657
+        alert_if_down: yes
+
+  "Kava":
+    chain_id: kava_2222-10
+    #valoper_address: kavavaloper1z5gx09hhvhkdkessuj0g9qyx0a78jajcgsmupd
+    valoper_address: kavavaloper140g8fnnl46mlvfhygj3zvjqlku6x0fwu6lgey7
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 10
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: http://fsn3:56657
+        alert_if_down: yes
+      #- url: http://192.168.255.252:26657
+        #alert_if_down: yes
+
+  "Sifchain":
+    chain_id: sifchain-1
+    #valoper_address: sifvaloper1fc8sh7yv9ajwg368j70ezf6pjmfj0m6j20ldka
+    valoper_address: sifvaloper1cl2dlphuceygxec7mmez905clvn4pw9d793m55
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 10
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: http://fsn3:26657
+        alert_if_down: yes
+      - url: http://sea2:26657
+        alert_if_down: yes
+
+  "Stargaze":
+    chain_id: stargaze-1
+    #valoper_address: starsvaloper19jw025fpcmayxj4qxp50uh2jvxuff57vw2krv6
+    valoper_address: starsvaloper1msylh4vxq8uyz6cwcerme3yyq3cjpanpuw72pf
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 10
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: http://fsn3:46657
+        alert_if_down: yes
+      - url: http://hil:26657
+        alert_if_down: yes
+      - url: http://fra:36657
+        alert_if_down: yes
+
+  "TerraClassic":
+    chain_id: columbus-5
+    #valoper_address: terravaloper1vkdp7amtzcde4awykg8xuph0sq89xghpkxyzye
+    valoper_address: terravaloper1qfx03ywz9hhxupv73lq06da6jjrdwwrl33yp8e
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 10
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: http://hel-api:26657
+        alert_if_down: yes
+      - url: http://fra-s0:26657
+        alert_if_down: yes
+      - url: http://hel-v1:26657
+        alert_if_down: yes
+
+  "Terra2":
+    chain_id: phoenix-1
+    #valoper_address: terravaloper1wzvgc8j840qtsfsa55kuf9cypqwa2tqnkrduqx
+    valoper_address: terravaloper135rv58zmcs6usxazsqrc70uwc4mlxkwdlhmlu9
+    alerts:
+      stalled_enabled: yes
+      stalled_minutes: 10
+      consecutive_missed: 5
+      consecutive_priority: critical
+      consecutive_enabled: yes
+      percentage_missed: 10
+      percentage_priority: warning
+      percentage_enabled: no
+      alert_if_inactive: yes
+      alert_if_no_servers: yes
+      pagerduty_alerts: yes
+      discord_alerts: yes
+      telegram_alerts: yes
+    nodes:
+      - url: http://fra-s0:36657
+        alert_if_down: yes
+      - url: http://hel-v1:36657
+        alert_if_down: yes
+      - url: http://hel-api:36657
+        alert_if_down: yes
