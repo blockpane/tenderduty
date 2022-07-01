@@ -41,8 +41,17 @@ docker run -d --name tenderduty -p "8888:8888" -p "28686:28686" --restart unless
 docker logs -f --tail 20 tenderduty
 ```
 
-Or if building from source:
+Or to build from source:
 
+easy way:
+```
+go install github.com/blockpane/tenderduty
+~/go/bin/tenderduty -example-config >config.yml
+# edit config
+~/go/bin/tenderduty
+```
+
+hard way:
 ```
 git clone https://github.com/blockpane/tenderduty
 cd tenderduty
