@@ -29,7 +29,7 @@ Usage of tenderduty:
 
 ## Quick start
 
-30 second quickstart for beta testers:
+30 second quickstart:
 
 if you'd prefer to containerize and not build locally, you can:
 
@@ -46,7 +46,6 @@ Or if building from source:
 ```
 git clone https://github.com/blockpane/tenderduty
 cd tenderduty
-git checkout release/v2
 cp example-config.yml config.yml
 # edit config.yml
 go get ./...
