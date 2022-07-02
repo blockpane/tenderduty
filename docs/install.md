@@ -77,10 +77,10 @@ brew install go
 
 ### Building
 
-The fastest way is to just let go do all the work:
+The fastest way is to just let go do all the work, the downside to this is it will always pull the main branch. Go devs made the decision to disallow replace directives on versioned installs. So this method is not recommended.
 
 ```shell
-go install github.com/blockpane/tenderduty@latest
+go install github.com/blockpane/tenderduty
 ~/go/bin/tenderduty -example-config > config.yml
 # edit config.yml
 ~/go/bin/tenderduty
@@ -115,8 +115,11 @@ sudo -su tenderduty
 cd ~
 echo 'export PATH=$PATH:~/go/bin' >> .bashrc
 . .bashrc
-go install github.com/blockpane/tenderduty@latest
-tenderduty --example-config > config.yml
+git clone https://github.com/blockpane/tenderduty
+cd tenderduty
+go install
+cp example-config.yml ../config.yml
+cd ..
 # Edit the config.yml with your editor of choice
 exit
 ```
