@@ -115,7 +115,10 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 		sub := cast.Listen()
 		defer sub.Discard()
 		for message := range sub.Channel() {
-			_ = c.WriteMessage(websocket.TextMessage, message.([]byte))
+			e := c.WriteMessage(websocket.TextMessage, message.([]byte))
+			if e != nil {
+				return
+			}
 		}
 	})
 
