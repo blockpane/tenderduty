@@ -27,28 +27,15 @@ Usage of tenderduty:
     	file for storing state between restarts (default ".tenderduty-state.json")
 ```
 
-## Quick start
+## Installing
 
-30 second quickstart:
+Detailed installation info is in the [installation doc.](docs/install.md)
 
-if you'd prefer to containerize and not build locally, you can:
-
-```
-mkdir tenderduty && cd tenderduty
-docker run --rm ghcr.io/blockpane/tenderduty:latest -example-config >config.yml
-# edit config.yml and add chains, notification methods etc.
-docker run -d --name tenderduty -p "8888:8888" -p "28686:28686" --restart unless-stopped -v $(pwd)/config.yml:/var/lib/tenderduty/config.yml ghcr.io/blockpane/tenderduty:latest
-docker logs -f --tail 20 tenderduty
-```
-
-Or if building from source:
+30 second quickstart if you already have Go installed:
 
 ```
-git clone https://github.com/blockpane/tenderduty
-cd tenderduty
-cp example-config.yml config.yml
-# edit config.yml
-go get ./...
-go install
+go install github.com/blockpane/tenderduty@latest
+~/go/bin/tenderduty -example-config >config.yml
+# edit config
 ~/go/bin/tenderduty
 ```
