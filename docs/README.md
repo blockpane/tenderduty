@@ -6,12 +6,12 @@ This is a tool for validators running tendermint nodes. It sends notifications w
 
 ## Detailed Documentation Topics
 
-- [Configuration File Settings](config.md)
 - [Installation](install.md)
-- TODO: [Prometheus Exports](prometheus.md)
-- TODO: [Setting up Discord](discord.md)
-- Partial: [Setting up PagerDuty](pagerduty.md)
+- [Configuration File Settings](config.md)
+- [Setting up PagerDuty](pagerduty.md)
+- [Setting up Discord](discord.md)
 - TODO: [Setting up Telegram](telegram.md)
+- [Prometheus Exports](prometheus.md)
 
 ## What does it do?
 

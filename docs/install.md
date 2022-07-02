@@ -77,16 +77,7 @@ brew install go
 
 ### Building
 
-The fastest way is to just let go do all the work:
-
-```shell
-go install github.com/blockpane/tenderduty@latest
-~/go/bin/tenderduty -example-config > config.yml
-# edit config.yml
-~/go/bin/tenderduty
-```
-
-If you want to hack on the source, it's easier to clone the repo:
+Because of design choices made by golang devs, it's not possible to use 'go install' remotely because tendermint uses replace directives in the go.mod file. It's necessary to clone the repo and build manually.
 
 ```
 git clone https://github.com/blockpane/tenderduty
@@ -94,7 +85,7 @@ cd tenderduty
 cp example-config.yml config.yml
 # edit config.yml with your favorite editor
 go get ./...
-go run main.go
+go build -ldflags '-s -w' -trimpath -o ~/go/bin/tenderduty main.go
 ```
 
 ## Run as a systemd service on Ubuntu
@@ -115,8 +106,11 @@ sudo -su tenderduty
 cd ~
 echo 'export PATH=$PATH:~/go/bin' >> .bashrc
 . .bashrc
-go install github.com/blockpane/tenderduty@latest
-tenderduty --example-config > config.yml
+git clone https://github.com/blockpane/tenderduty
+cd tenderduty
+go install
+cp example-config.yml ../config.yml
+cd ..
 # Edit the config.yml with your editor of choice
 exit
 ```
@@ -133,8 +127,8 @@ ConditionPathExists=/var/lib/tenderduty/go/bin/tenderduty
 
 [Service]
 Type=simple
-Restart=on-failure
-RestartSec=120
+Restart=always
+RestartSec=5
 TimeoutSec=180
 
 User=tenderduty
