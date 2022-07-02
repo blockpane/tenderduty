@@ -80,7 +80,7 @@ brew install go
 The fastest way is to just let go do all the work, the downside to this is it will always pull the main branch. Go devs made the decision to disallow replace directives on versioned installs. So this method is not recommended.
 
 ```shell
-go install github.com/blockpane/tenderduty
+go install github.com/blockpane/tenderduty/v2
 ~/go/bin/tenderduty -example-config > config.yml
 # edit config.yml
 ~/go/bin/tenderduty
