@@ -157,6 +157,14 @@ func prometheusExporter(ctx context.Context, updates chan *promUpdate) {
 	}()
 
 	l("serving prometheus metrics at 0.0.0.0:%d/metrics", td.PrometheusListenPort)
-	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", td.PrometheusListenPort), nil))
+	promMux := http.NewServeMux()
+
+	l("serving prometheus metrics at 0.0.0.0:%d/metrics", td.PrometheusListenPort)
+	promMux.Handle("/metrics", promhttp.Handler())
+	promSrv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", td.PrometheusListenPort),
+		Handler: promMux,
+	}
+	//log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", td.PrometheusListenPort), nil))
+	log.Fatal(promSrv.ListenAndServe())
 }
