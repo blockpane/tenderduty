@@ -34,7 +34,7 @@ Detailed installation info is in the [installation doc.](docs/install.md)
 30 second quickstart if you already have Go installed:
 
 ```
-go install github.com/blockpane/tenderduty
+go install github.com/blockpane/tenderduty@latest
 ~/go/bin/tenderduty -example-config >config.yml
 # edit config
 ~/go/bin/tenderduty

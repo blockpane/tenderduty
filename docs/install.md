@@ -115,7 +115,7 @@ sudo -su tenderduty
 cd ~
 echo 'export PATH=$PATH:~/go/bin' >> .bashrc
 . .bashrc
-go install github.com/blockpane/tenderduty
+go install github.com/blockpane/tenderduty@latest
 tenderduty --example-config > config.yml
 # Edit the config.yml with your editor of choice
 exit
