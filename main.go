@@ -25,7 +25,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := td2.Run(configFile, stateFile, dumpConfig)
+	err := td2.Run(configFile, stateFile)
 	if err != nil {
 		log.Println(err.Error(), "... exiting.")
 	}

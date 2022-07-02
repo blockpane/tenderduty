@@ -138,11 +138,6 @@ func notifyDiscord(msg *alertMsg) (err error) {
 
 	if resp.StatusCode != 204 {
 		log.Println(resp)
-		//if resp.Body != nil {
-		//	b, _ := ioutil.ReadAll(resp.Body)
-		//	_ = resp.Body.Close()
-		//	fmt.Println(string(b))
-		//}
 		l("notify discord:", err)
 		return err
 	}
@@ -184,7 +179,6 @@ func notifyTg(msg *alertMsg) (err error) {
 	if !shouldNotify(msg, tg) {
 		return nil
 	}
-	//tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	bot, err := tgbotapi.NewBotAPI(msg.tgKey)
 	if err != nil {
 		l("notify telegram:", err)
@@ -197,7 +191,6 @@ func notifyTg(msg *alertMsg) (err error) {
 	}
 
 	mc := tgbotapi.NewMessageToChannel(msg.tgChannel, fmt.Sprintf("%s: %s - %s", msg.chain, prefix, msg.message))
-	//mc.ParseMode = "html"
 	_, err = bot.Send(mc)
 	if err != nil {
 		l("telegram send:", err)
@@ -240,7 +233,6 @@ func getAlarms(chain string) string {
 	alarms.notifyMux.RLock()
 	defer alarms.notifyMux.RUnlock()
 	// don't show this info if the logs are disabled on the dashboard, potentially sensitive info could be leaked.
-	//if td.HideLogs || currentAlarms[chain] == nil {
 	if td.HideLogs || alarms.AllAlarms[chain] == nil {
 		return ""
 	}
@@ -428,7 +420,6 @@ func (cc *ChainConfig) watch() {
 		}
 
 		// window percentage missed block alarms
-		//fmt.Println(100*float64(cc.valInfo.Missed)/float64(cc.valInfo.Window), float64(cc.Alerts.Window))
 		if cc.Alerts.PercentageAlerts && !pctAlarm && 100*float64(cc.valInfo.Missed)/float64(cc.valInfo.Window) > float64(cc.Alerts.Window) {
 			// alert on missed block counter!
 			pctAlarm = true
@@ -458,7 +449,7 @@ func (cc *ChainConfig) watch() {
 		// node down alarms
 		for _, node := range cc.Nodes {
 			// window percentage missed block alarms
-			if node.AlertIfDown && node.down && !nodeAlarms[node.Url] && !node.downSince.IsZero() && time.Now().Sub(node.downSince).Minutes() > float64(td.NodeDownMin) {
+			if node.AlertIfDown && node.down && !nodeAlarms[node.Url] && !node.downSince.IsZero() && time.Since(node.downSince) > time.Duration(td.NodeDownMin)*time.Minute {
 				// alert on dead node
 				cc.activeAlerts += 1
 				nodeAlarms[node.Url] = true
@@ -485,11 +476,11 @@ func (cc *ChainConfig) watch() {
 
 		if td.Prom {
 			// raw block timer, ignoring finalized state
-			td.statsChan <- cc.mkUpdate(metricLastBlockSecondsNotFinal, time.Now().Sub(cc.lastBlockTime).Seconds(), "")
+			td.statsChan <- cc.mkUpdate(metricLastBlockSecondsNotFinal, time.Since(cc.lastBlockTime).Seconds(), "")
 			// update node-down times for prometheus
 			for _, node := range cc.Nodes {
 				if node.down && !node.downSince.IsZero() {
-					td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Now().Sub(node.downSince).Seconds(), node.Url)
+					td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Since(node.downSince).Seconds(), node.Url)
 				}
 			}
 		}

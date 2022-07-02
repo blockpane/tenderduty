@@ -156,6 +156,5 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 	if err != nil {
 		return
 	}
-	//fmt.Println(pk.Address().Bytes())
 	return pk.Address().Bytes(), val.Validator.GetMoniker(), val.Validator.Jailed, val.Validator.Status == 3, nil
 }

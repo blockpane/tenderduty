@@ -29,7 +29,6 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 		log.Fatalln(err)
 	}
 	var cast broadcast.Broadcaster
-	defer cast.Discard()
 
 	// cache the json .... don't serialize on-demand
 	logCache, statusCache := []byte{'[', ']'}, []byte{'{', '}'}
@@ -142,7 +141,9 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 	})
 
 	http.Handle("/", &CacheHandler{})
-	log.Fatal("tenderduty - dashboard:", http.ListenAndServe(":"+port, nil))
+	err = http.ListenAndServe(":"+port, nil)
+	cast.Discard()
+	log.Fatal("tenderduty dashboard server failed", err)
 }
 
 // CacheHandler implements the Handler interface with a Cache-Control set on responses

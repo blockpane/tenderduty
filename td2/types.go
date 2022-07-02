@@ -72,7 +72,6 @@ type ChainConfig struct {
 	wsclient       *TmConn       // custom websocket client to work around wss:// bugs in tendermint
 	client         *rpchttp.HTTP // legit tendermint client
 	noNodes        bool          // tracks if all nodes are down
-	noBlocksCount  int           // counter (minutes) of how long since a block has been seen
 	valInfo        *ValInfo      // recent validator state, only refreshed every few minutes
 	lastValInfo    *ValInfo      // use for detecting newly-jailed/tombstone
 	blocksResults  []int
@@ -149,13 +148,13 @@ type AlertConfig struct {
 	AlertIfNoServers bool `yaml:"alert_if_no_servers"`
 
 	// PagerdutyAlerts: Should pagerduty alerts be sent for this chain? Both 'config.pagerduty.enabled: yes' and this must be set.
-	//deprecated: use Pagerduty.Enabled instead
+	//Deprecated: use Pagerduty.Enabled instead
 	PagerdutyAlerts bool `yaml:"pagerduty_alerts"`
 	// DiscordAlerts: Should discord alerts be sent for this chain? Both 'config.discord.enabled: yes' and this must be set.
-	//deprecated: use Discord.Enabled instead
+	//Deprecated: use Discord.Enabled instead
 	DiscordAlerts bool `yaml:"discord_alerts"`
 	// TelegramAlerts: Should telegram alerts be sent for this chain? Both 'config.telegram.enabled: yes' and this must be set.
-	//deprecated: use Telegram.Enabled instead
+	//Deprecated: use Telegram.Enabled instead
 	TelegramAlerts bool `yaml:"telegram_alerts"`
 
 	// chain specific overrides for alert destinations.
@@ -223,13 +222,13 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		}
 	}
 
-	if c.Discord.Enabled {
-		// TODO
-	}
+	// if c.Discord.Enabled {
+	// 	// TODO
+	// }
 
-	if c.Telegram.Enabled {
-		// TODO
-	}
+	// if c.Telegram.Enabled {
+	// 	// TODO
+	// }
 
 	var wantsPublic bool
 	for k, v := range c.Chains {
@@ -277,7 +276,7 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			v.Alerts.Pagerduty.DefaultSeverity = c.Pagerduty.DefaultSeverity
 		}
 
-		switch true {
+		switch {
 		case v.Alerts.Discord.Enabled && !c.Discord.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %s is configured for discord alerts, but it is not enabled", k))
 			fallthrough
@@ -332,7 +331,7 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 }
 
 // loadConfig creates a new Config from a file.
-func loadConfig(yamlFile, stateFile string, dumpDefault bool) (*Config, error) {
+func loadConfig(yamlFile, stateFile string) (*Config, error) {
 
 	//#nosec -- variable specified on command line
 	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)

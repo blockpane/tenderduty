@@ -42,7 +42,6 @@ type promUpdate struct {
 	name     string
 	chainId  string
 	moniker  string
-	blocknum string
 	endpoint string
 }
 

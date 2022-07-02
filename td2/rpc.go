@@ -145,7 +145,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 							node.downSince = time.Now()
 						}
 						if td.Prom {
-							td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Now().Sub(node.downSince).Seconds(), node.Url)
+							td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Since(node.downSince).Seconds(), node.Url)
 						}
 						l("⚠️ " + node.lastMsg)
 					}

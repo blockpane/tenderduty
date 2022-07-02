@@ -16,7 +16,7 @@ var altValopers = &valoperOverrides{
 		"ival": "ica", // Iris hub
 
 		// TODO: was told tgrade also has a custom prefix, but not sure what the pair is
-		//"tval": "tvalcons",
+		// "tval": "tvalcons",
 	},
 }
 

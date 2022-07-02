@@ -13,9 +13,9 @@ import (
 
 var td = &Config{}
 
-func Run(configFile, stateFile string, dumpConfig bool) error {
+func Run(configFile, stateFile string) error {
 	var err error
-	td, err = loadConfig(configFile, stateFile, dumpConfig)
+	td, err = loadConfig(configFile, stateFile)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 	} else {
 		go func() {
 			for {
-				_ = <-td.updateChan
+				<-td.updateChan
 			}
 		}()
 	}
@@ -70,7 +70,7 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 	} else {
 		go func() {
 			for {
-				_ = <-td.statsChan
+				<-td.statsChan
 			}
 		}()
 	}
@@ -121,7 +121,7 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 
 func saveOnExit(stateFile string, saved chan interface{}) {
 	quitting := make(chan os.Signal, 1)
-	signal.Notify(quitting, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
+	signal.Notify(quitting, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	saveState := func() {
 		defer close(saved)
