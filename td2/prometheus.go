@@ -166,7 +166,7 @@ func prometheusExporter(ctx context.Context, updates chan *promUpdate) {
 		Handler:           promMux,
 		ReadTimeout:       20 * time.Second,
 		WriteTimeout:      20 * time.Second,
-		IdleTimeout:       20 * time.Second,
+		IdleTimeout:       120 * time.Second,
 		ReadHeaderTimeout: 20 * time.Second,
 	}
 	log.Fatal(promSrv.ListenAndServe())
