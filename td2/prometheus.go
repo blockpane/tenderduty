@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var (
@@ -162,9 +163,11 @@ func prometheusExporter(ctx context.Context, updates chan *promUpdate) {
 	l("serving prometheus metrics at 0.0.0.0:%d/metrics", td.PrometheusListenPort)
 	promMux.Handle("/metrics", promhttp.Handler())
 	promSrv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", td.PrometheusListenPort),
-		Handler: promMux,
+		Addr:         fmt.Sprintf(":%d", td.PrometheusListenPort),
+		Handler:      promMux,
+		ReadTimeout:  20 * time.Second,
+		WriteTimeout: 20 * time.Second,
+		IdleTimeout:  20 * time.Second,
 	}
-	//log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", td.PrometheusListenPort), nil))
 	log.Fatal(promSrv.ListenAndServe())
 }
