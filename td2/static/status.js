@@ -70,16 +70,16 @@ function updateTable(status) {
         if (status.Status[i].active_alerts > 0 || status.Status[i].last_error !== "") {
             if (status.Status[i].last_error !== "") {
                 alerts = `
-            <a href="#modal-center-${status.Status[i].name}" uk-toggle><span uk-icon='warning' uk-tooltip="${status.Status[i].active_alerts} active issues" style='color: darkorange'></span></a>
-            <div id="modal-center-${status.Status[i].name}" class="uk-flex-top" uk-modal>
+            <a href="#modal-center-${status.Status[i].name}" uk-toggle><span uk-icon='warning' uk-tooltip="${_.escape(status.Status[i].active_alerts)} active issues" style='color: darkorange'></span></a>
+            <div id="modal-center-${_.escape(status.Status[i].name)}" class="uk-flex-top" uk-modal>
                 <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical uk-background-secondary">
                     <button class="uk-modal-close-default" type="button" uk-close></button>
-                    <pre class=" uk-background-secondary" style="color: white">${status.Status[i].last_error}</pre>
+                    <pre class=" uk-background-secondary" style="color: white">${_.escape(status.Status[i].last_error)}</pre>
                 </div>
             </div>
             `
             } else {
-                alerts = `<span uk-icon='warning' uk-tooltip="${status.Status[i].active_alerts} active issues" style='color: darkorange'></span>`
+                alerts = `<span uk-icon='warning' uk-tooltip="${_.escape(status.Status[i].active_alerts)} active issues" style='color: darkorange'></span>`
             }
         }
 
@@ -106,9 +106,9 @@ function updateTable(status) {
         } else {
             window += `${(100 - (status.Status[i].missed / status.Status[i].window) * 100).toFixed(2)}%</div>`
         }
-        window += `<div class="uk-width-1-2">${status.Status[i].missed} / ${status.Status[i].window}</div>`
+        window += `<div class="uk-width-1-2">${_.escape(status.Status[i].missed)} / ${_.escape(status.Status[i].window)}</div>`
 
-        let nodes = `${status.Status[i].healthy_nodes} / ${status.Status[i].nodes}`
+        let nodes = `${_.escape(status.Status[i].healthy_nodes)} / ${_.escape(status.Status[i].nodes)}`
         if (status.Status[i].healthy_nodes < status.Status[i].nodes) {
             nodes = "<strong><span uk-icon='arrow-down' style='color: darkorange'></span>" + nodes + "</strong>"
         }
@@ -121,13 +121,13 @@ function updateTable(status) {
 
         let r=document.getElementById('statusTable').insertRow(i)
         r.insertCell(0).innerHTML = `<div>${alerts}</div>`
-        r.insertCell(1).innerHTML = `<div>${status.Status[i].name} (${status.Status[i].chain_id})</div>`
-        r.insertCell(2).innerHTML = `<div class="${heightClass}" style="font-family: monospace; color: #6f6f6f; text-align: start">${status.Status[i].height}</div>`
+        r.insertCell(1).innerHTML = `<div>${_.escape(status.Status[i].name)} (${_.escape(status.Status[i].chain_id)})</div>`
+        r.insertCell(2).innerHTML = `<div class="${heightClass}" style="font-family: monospace; color: #6f6f6f; text-align: start">${_.escape(status.Status[i].height)}</div>`
         if (status.Status[i].moniker === "not connected") {
-            r.insertCell(3).innerHTML = `<div class="uk-text-warning">${status.Status[i].moniker}</div>`
+            r.insertCell(3).innerHTML = `<div class="uk-text-warning">${_.escape(status.Status[i].moniker)}</div>`
             bonded = "unknown"
         } else {
-            r.insertCell(3).innerHTML = `<div class='uk-text-truncate'>${status.Status[i].moniker.substring(0,24)}</div>`
+            r.insertCell(3).innerHTML = `<div class='uk-text-truncate'>${_.escape(status.Status[i].moniker.substring(0,24))}</div>`
         }
         r.insertCell(4).innerHTML = `<div style="text-align: center">${bonded}</div>`
         r.insertCell(5).innerHTML = `<div uk-grid>${window}</div>`
