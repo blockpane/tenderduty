@@ -5,7 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/td2/dashboard"
+	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"

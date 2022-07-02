@@ -4,7 +4,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
-	td2 "github.com/blockpane/tenderduty/td2"
+	td2 "github.com/blockpane/tenderduty/v2/td2"
 	"log"
 	"os"
 )
