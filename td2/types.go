@@ -4,11 +4,13 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -331,28 +333,55 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 }
 
 // loadConfig creates a new Config from a file.
-func loadConfig(yamlFile, stateFile string) (*Config, error) {
+func loadConfig(yamlFile, stateFile string, password *string) (*Config, error) {
 
-	//#nosec -- variable specified on command line
-	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
-	if e != nil {
-		return nil, e
-	}
-	i, e := f.Stat()
-	if e != nil {
-		_ = f.Close()
-		return nil, e
-	}
-	b := make([]byte, int(i.Size()))
-	_, e = f.Read(b)
-	_ = f.Close()
-	if e != nil {
-		return nil, e
-	}
 	c := &Config{}
-	e = yaml.Unmarshal(b, c)
-	if e != nil {
-		return nil, e
+	if strings.HasPrefix(yamlFile, "http://") || strings.HasPrefix(yamlFile, "https://") {
+		if *password == "" {
+			return nil, errors.New("a password is required if loading a remote configuration")
+		}
+		//#nosec -- url is specified on command line
+		resp, err := http.Get(yamlFile)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		decrypted, err := decrypt(b, *password)
+		if err != nil {
+			return nil, err
+		}
+		empty := ""
+		password = &empty             // let gc get password out of memory, it's still referenced in main()
+		_ = os.Setenv("PASSWORD", "") // also clear the ENV var
+		err = yaml.Unmarshal(decrypted, c)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		//#nosec -- variable specified on command line
+		f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
+		if e != nil {
+			return nil, e
+		}
+		i, e := f.Stat()
+		if e != nil {
+			_ = f.Close()
+			return nil, e
+		}
+		b := make([]byte, int(i.Size()))
+		_, e = f.Read(b)
+		_ = f.Close()
+		if e != nil {
+			return nil, e
+		}
+		e = yaml.Unmarshal(b, c)
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	c.alertChan = make(chan *alertMsg)
@@ -375,7 +404,7 @@ func loadConfig(yamlFile, stateFile string) (*Config, error) {
 	if e != nil {
 		l("could not load saved state", e.Error())
 	}
-	b, e = io.ReadAll(sf)
+	b, e := io.ReadAll(sf)
 	_ = sf.Close()
 	if e != nil {
 		l("could not read saved state", e.Error())

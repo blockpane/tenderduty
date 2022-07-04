@@ -182,6 +182,7 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 	return
 }
 
+// EncryptedConfig handles conversion of an encrypted or plaintext config to disk
 func EncryptedConfig(plaintext, ciphertext, pass string, decrypting bool) error {
 	var infile, outfile = plaintext, ciphertext
 	if decrypting {

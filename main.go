@@ -50,7 +50,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := td2.Run(configFile, stateFile)
+	err := td2.Run(configFile, stateFile, &password)
 	if err != nil {
 		log.Println(err.Error(), "... exiting.")
 	}

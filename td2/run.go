@@ -13,9 +13,9 @@ import (
 
 var td = &Config{}
 
-func Run(configFile, stateFile string) error {
+func Run(configFile, stateFile string, password *string) error {
 	var err error
-	td, err = loadConfig(configFile, stateFile)
+	td, err = loadConfig(configFile, stateFile, password)
 	if err != nil {
 		return err
 	}
