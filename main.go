@@ -33,9 +33,10 @@ func main() {
 		if password == "" {
 			if os.Getenv("PASSWORD") != "" {
 				password = os.Getenv("PASSWORD")
-			} else {
-				// TODO: prompt for password
 			}
+			// } else {
+			// 	// TODO: prompt for password
+			// }
 		}
 		var e error
 		if encryptConfig {

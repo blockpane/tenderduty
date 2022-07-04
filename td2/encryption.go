@@ -60,7 +60,7 @@ func getKey(pass string, knownSalt []byte) (key, macKey, salt []byte, err error)
 
 // encrypt encrypts a []byte using AES256, prepends the salt and iv, appends an SHA-256 HMAC, and returns as a Base64 encoded []byte
 func encrypt(plainText []byte, password string) (encryptedConfig []byte, err error) {
-	if plainText == nil || len(plainText) == 0 {
+	if len(plainText) == 0 {
 		err = errors.New("invalid config file")
 		return
 	}
@@ -98,8 +98,9 @@ func encrypt(plainText []byte, password string) (encryptedConfig []byte, err err
 	// encrypt the file
 	cipherText := make([]byte, len(plainText))
 	cbc.CryptBlocks(cipherText, plainText)
-	if cipherText == nil || len(cipherText) == 0 {
+	if len(cipherText) == 0 {
 		err = errors.New("invalid ciphertext, nothing encrypted")
+		return
 	}
 
 	_, err = buf.Write(cipherText)
@@ -137,6 +138,7 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 
 	if size <= 2*idKeySize+ivSize {
 		err = errors.New("ciphertext is too short")
+		return
 	}
 
 	// get our keys, salt is first idKeySize bytes
@@ -155,7 +157,7 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 		return
 	}
 	authSum := auth.Sum(nil)
-	if !bytes.Equal(cipherText[len(cipherText)-macSize:len(cipherText)], authSum) {
+	if !bytes.Equal(cipherText[len(cipherText)-macSize:], authSum) {
 		err = errors.New("HMAC authentication failed")
 		return
 	}
@@ -196,7 +198,7 @@ func EncryptedConfig(plaintext, ciphertext, pass string, decrypting bool) error 
 	}
 	_ = fin.Close()
 
-	outConfig := make([]byte, 0)
+	var outConfig []byte
 	if decrypting {
 		outConfig, err = decrypt(inConfig, pass)
 		if err != nil {
