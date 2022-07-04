@@ -17,7 +17,7 @@ var defaultConfig []byte
 func main() {
 	var configFile, encryptedFile, stateFile, password string
 	var dumpConfig, encryptConfig, decryptConfig bool
-	flag.StringVar(&configFile, "f", "config.yml", "configuration file to use")
+	flag.StringVar(&configFile, "f", "config.yml", "configuration file to use, can also be set with the ENV var 'CONFIG'")
 	flag.StringVar(&encryptedFile, "encrypted-config", "config.yml.asc", "encrypted config file, only valid with -encrypt or -decrypt flag")
 	flag.StringVar(&stateFile, "state", ".tenderduty-state.json", "file for storing state between restarts")
 	flag.StringVar(&password, "password", "", "password to use for encrypting/decrypting the config, if unset will prompt, also can use ENV var 'PASSWORD'")
@@ -31,6 +31,10 @@ func main() {
 		os.Exit(0)
 	}
 
+	if configFile == "config.yml" && os.Getenv("CONFIG") != "" {
+		configFile = os.Getenv("CONFIG")
+	}
+
 	if encryptConfig || decryptConfig {
 		if password == "" {
 			if os.Getenv("PASSWORD") != "" {
@@ -41,6 +45,7 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
+				fmt.Println("")
 				password = string(pass)
 				pass = nil
 			}

@@ -12,6 +12,7 @@ This is a tool for validators running tendermint nodes. It sends notifications w
 - [Setting up Discord](discord.md)
 - TODO: [Setting up Telegram](telegram.md)
 - [Prometheus Exports](prometheus.md)
+- [Remotely Configuring Tenderduty](remote.md)
 
 ## What does it do?
 
