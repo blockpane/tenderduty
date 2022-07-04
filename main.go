@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	td2 "github.com/blockpane/tenderduty/v2/td2"
+	"golang.org/x/term"
 	"log"
 	"os"
+	"syscall"
 )
 
 //go:embed example-config.yml
@@ -33,10 +35,15 @@ func main() {
 		if password == "" {
 			if os.Getenv("PASSWORD") != "" {
 				password = os.Getenv("PASSWORD")
+			} else {
+				fmt.Print("Please enter the encryption password: ")
+				pass, err := term.ReadPassword(int(syscall.Stdin))
+				if err != nil {
+					log.Fatal(err)
+				}
+				password = string(pass)
+				pass = nil
 			}
-			// } else {
-			// 	// TODO: prompt for password
-			// }
 		}
 		var e error
 		if encryptConfig {
