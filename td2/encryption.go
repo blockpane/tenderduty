@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/go-passwd/validator"
@@ -91,13 +90,10 @@ func encrypt(plainText []byte, password string) (encryptedConfig []byte, err err
 	cbc := cipher.NewCBCEncrypter(blk, iv)
 
 	// pad the plaintext
-	fmt.Println("plaintext size", len(plainText))
 	padLen := cbc.BlockSize() - (len(plainText) % cbc.BlockSize())
-	fmt.Println("mod blocksize", padLen)
 	if padLen > 0 {
 		plainText = append(plainText, bytes.Repeat([]byte{uint8(padLen)}, padLen)...)
 	}
-	fmt.Println(len(plainText), "plaintext padded size", padLen, "added")
 
 	// encrypt the file
 	cipherText := make([]byte, len(plainText))
@@ -110,7 +106,6 @@ func encrypt(plainText []byte, password string) (encryptedConfig []byte, err err
 	if err != nil {
 		return
 	}
-	fmt.Println("buffer length", buf.Len())
 
 	// create an outer hmac
 	signer := hmac.New(sha256.New, macKey)
@@ -121,7 +116,7 @@ func encrypt(plainText []byte, password string) (encryptedConfig []byte, err err
 	// sign the message
 	_, err = buf.Write(signer.Sum(nil))
 
-	encryptedConfig = make([]byte, base64.StdEncoding.EncodedLen(buf.Len()-1))
+	encryptedConfig = make([]byte, base64.StdEncoding.EncodedLen(buf.Len()))
 	base64.StdEncoding.Encode(encryptedConfig, buf.Bytes())
 	return
 }
@@ -135,6 +130,10 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 	if err != nil {
 		return
 	}
+	// decoding can leave null bytes at the end of our slice, which will result in an invalid hmac key
+	for cipherText[len(cipherText)-1] == 0 {
+		cipherText = cipherText[:len(cipherText)-1]
+	}
 
 	if size <= 2*idKeySize+ivSize {
 		err = errors.New("ciphertext is too short")
@@ -145,21 +144,18 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 	if err != nil {
 		return
 	}
-	ct := cipherText[idKeySize+ivSize : len(cipherText)-macSize-1]
-	fmt.Println("authenticated length", len(cipherText[:len(cipherText)-macSize-1]))
-	fmt.Println("last byte", cipherText[len(cipherText)-1])
+
+	authText := cipherText[:len(cipherText)-macSize]
 
 	_ = macKey
 	// authenticate
 	auth := hmac.New(sha256.New, macKey)
-	_, err = auth.Write(cipherText[:len(cipherText)-macSize-1])
+	_, err = auth.Write(authText)
 	if err != nil {
 		return
 	}
 	authSum := auth.Sum(nil)
-	fmt.Println(hex.EncodeToString(cipherText[len(cipherText)-macSize-1 : len(cipherText)-1]))
-	fmt.Println(hex.EncodeToString(authSum))
-	if !bytes.Equal(cipherText[len(cipherText)-macSize-1:len(cipherText)-1], authSum) {
+	if !bytes.Equal(cipherText[len(cipherText)-macSize:len(cipherText)], authSum) {
 		err = errors.New("HMAC authentication failed")
 		return
 	}
@@ -169,18 +165,17 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 		return nil, err
 	}
 	cbc := cipher.NewCBCDecrypter(block, cipherText[idKeySize:idKeySize+ivSize])
-	plainText = make([]byte, len(ct))
-	fmt.Println(len(plainText), "plaintext size")
-	cbc.CryptBlocks(plainText, ct)
+	plainText = make([]byte, len(authText)-ivSize-idKeySize)
+	cbc.CryptBlocks(plainText, authText[ivSize+idKeySize:])
 	if len(plainText) == 0 {
 		err = errors.New("plaintext was empty")
 		return
 	}
 
 	// strip padding
-	if len(plainText)%block.BlockSize() != 0 {
-		fmt.Println("stripping padding bytes:", len(plainText)-int(plainText[len(plainText)-1]))
-		return plainText[:len(plainText)-int(plainText[len(plainText)-1])], nil
+	padLen := int(plainText[len(plainText)-1])
+	if (len(plainText)-padLen)%block.BlockSize() != 0 {
+		return plainText[:len(plainText)-padLen], nil
 	}
 	return
 }
@@ -190,15 +185,16 @@ func EncryptedConfig(plaintext, ciphertext, pass string, decrypting bool) error 
 	if decrypting {
 		outfile, infile = plaintext, ciphertext
 	}
+	//#nosec -- file specified on command line
 	fin, err := os.OpenFile(infile, os.O_RDONLY, 0600)
 	if err != nil {
 		return err
 	}
-	defer fin.Close()
 	inConfig, err := io.ReadAll(fin)
 	if err != nil {
 		return err
 	}
+	_ = fin.Close()
 
 	outConfig := make([]byte, 0)
 	if decrypting {
@@ -212,15 +208,16 @@ func EncryptedConfig(plaintext, ciphertext, pass string, decrypting bool) error 
 			return err
 		}
 	}
+	//#nosec -- file specified on command line
 	fout, err := os.OpenFile(outfile, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
-	defer fout.Close()
 	size, err := fout.Write(outConfig)
 	if err != nil {
 		return err
 	}
+	_ = fout.Close()
 	fileType := "encrypted"
 	if decrypting {
 		fileType = "decrypted"
