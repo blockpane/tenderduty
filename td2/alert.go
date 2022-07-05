@@ -80,18 +80,21 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 		whichMap = alarms.SentDiAlarms
 		service = "Discord"
 	}
-	if !whichMap[msg.message].IsZero() && !msg.resolved {
+
+	switch {
+	case !whichMap[msg.message].IsZero() && !msg.resolved:
 		// already sent this alert
 		return false
-	} else if !whichMap[msg.message].IsZero() && msg.resolved {
+	case !whichMap[msg.message].IsZero() && msg.resolved:
 		// alarm is cleared
 		delete(whichMap, msg.message)
 		l(fmt.Sprintf("💜 Resolved     alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 		return true
-	} else if msg.resolved {
-		// it looks like we got a duplicate resolution? Note it and move on:
+	case msg.resolved:
+		// it looks like we got a duplicate resolution or suppressed it. Note it and move on:
 		l(fmt.Sprintf("😕 Not clearing alarm on %s (%s) - no corresponding alert %s", msg.chain, msg.message, service))
 	}
+
 	// check if the alarm is flapping, if we sent the same alert in the last five minutes, show a warning but don't alert
 	if alarms.flappingAlarms[msg.chain] == nil {
 		alarms.flappingAlarms[msg.chain] = make(map[string]time.Time)
@@ -325,7 +328,8 @@ func (cc *ChainConfig) watch() {
 		time.Sleep(2 * time.Second)
 
 		// alert if we can't monitor
-		if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes {
+		switch {
+		case cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes:
 			noNodesSec += 2
 			if noNodesSec <= 30*td.NodeDownMin {
 				l(fmt.Sprintf("no nodes available on %s for %d seconds, deferring alarm", cc.ChainId, noNodesSec))
@@ -341,7 +345,7 @@ func (cc *ChainConfig) watch() {
 					&cc.valInfo.Valcons,
 				)
 			}
-		} else if cc.Alerts.AlertIfNoServers && noNodes && !cc.noNodes {
+		case cc.Alerts.AlertIfNoServers && noNodes && !cc.noNodes:
 			noNodes = false
 			td.alert(
 				cc.name,
@@ -350,7 +354,7 @@ func (cc *ChainConfig) watch() {
 				true,
 				&cc.valInfo.Valcons,
 			)
-		} else {
+		default:
 			noNodesSec = 0
 		}
 
