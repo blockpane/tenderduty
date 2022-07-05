@@ -93,6 +93,7 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 	case msg.resolved:
 		// it looks like we got a duplicate resolution or suppressed it. Note it and move on:
 		l(fmt.Sprintf("😕 Not clearing alarm on %s (%s) - no corresponding alert %s", msg.chain, msg.message, service))
+		return false
 	}
 
 	// check if the alarm is flapping, if we sent the same alert in the last five minutes, show a warning but don't alert
@@ -332,7 +333,9 @@ func (cc *ChainConfig) watch() {
 		case cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes:
 			noNodesSec += 2
 			if noNodesSec <= 30*td.NodeDownMin {
-				l(fmt.Sprintf("no nodes available on %s for %d seconds, deferring alarm", cc.ChainId, noNodesSec))
+				if noNodesSec%20 == 0 {
+					l(fmt.Sprintf("no nodes available on %s for %d seconds, deferring alarm", cc.ChainId, noNodesSec))
+				}
 				noNodes = false
 			} else {
 				noNodesSec = 0
@@ -468,11 +471,15 @@ func (cc *ChainConfig) watch() {
 		// node down alarms
 		for _, node := range cc.Nodes {
 			// window percentage missed block alarms
-			if node.AlertIfDown && node.down && !nodeAlarms[node.Url] && !node.wasDown && !node.downSince.IsZero() &&
+			if node.AlertIfDown && node.down && !node.wasDown && !node.downSince.IsZero() &&
 				time.Since(node.downSince) > time.Duration(td.NodeDownMin)*time.Minute {
 				// alert on dead node
+				if !nodeAlarms[node.Url] {
+					cc.activeAlerts += 1
+				} else {
+					continue
+				}
 				nodeAlarms[node.Url] = true // used to keep active alert count correct
-				cc.activeAlerts += 1
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
@@ -480,7 +487,7 @@ func (cc *ChainConfig) watch() {
 					false,
 					&node.Url,
 				)
-			} else if node.AlertIfDown && node.wasDown {
+			} else if node.AlertIfDown && !node.down && node.wasDown {
 				// clear the alert
 				nodeAlarms[node.Url] = false
 				cc.activeAlerts -= 1

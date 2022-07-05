@@ -112,16 +112,13 @@ func (cc *ChainConfig) newRpc() error {
 			Blocks:       cc.blocksResults,
 		}
 	}
-	return errors.New("📵 no usable endpoints available for " + cc.ChainId)
+	return errors.New("no usable endpoints available for " + cc.ChainId)
 }
 
 func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 	tick := time.NewTicker(time.Minute)
 	if cc.client == nil {
-		e := cc.newRpc()
-		if e != nil {
-			l("💥", cc.ChainId, e)
-		}
+		_ = cc.newRpc()
 	}
 
 	for {

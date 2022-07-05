@@ -431,6 +431,7 @@ func loadConfig(yamlFile, stateFile string) (*Config, error) {
 						for j := range c.Chains[k].Nodes {
 							if c.Chains[k].Nodes[j].Url == nodeUrl {
 								c.Chains[k].Nodes[j].down = true
+								c.Chains[k].Nodes[j].wasDown = true
 								c.Chains[k].Nodes[j].downSince = v[nodeUrl]
 							}
 						}
