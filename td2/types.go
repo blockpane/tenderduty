@@ -356,9 +356,10 @@ func loadConfig(yamlFile, stateFile string) (*Config, error) {
 	}
 
 	c.alertChan = make(chan *alertMsg)
-	c.logChan = make(chan dash.LogMessage, 32)
-	c.updateChan = make(chan *dash.ChainStatus, 32)
-	c.statsChan = make(chan *promUpdate, 32)
+	c.logChan = make(chan dash.LogMessage)
+	// buffer enough to get through validateConfig()
+	c.updateChan = make(chan *dash.ChainStatus, len(c.Chains)*2)
+	c.statsChan = make(chan *promUpdate, len(c.Chains)*2)
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
 	// handle cached data. FIXME: incomplete.
