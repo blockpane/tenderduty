@@ -173,6 +173,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 					// node's OK, clear the note
 					if node.down {
 						node.lastMsg = ""
+						node.wasDown = true
 					}
 					td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, 0, node.Url)
 					node.down = false

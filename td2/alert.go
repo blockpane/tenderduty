@@ -88,6 +88,9 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 		delete(whichMap, msg.message)
 		l(fmt.Sprintf("💜 Resolved     alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 		return true
+	} else if msg.resolved {
+		// it looks like we got a duplicate resolution? Note it and move on:
+		l(fmt.Sprintf("😕 Not clearing alarm on %s (%s) - no corresponding alert %s", msg.chain, msg.message, service))
 	}
 	// check if the alarm is flapping, if we sent the same alert in the last five minutes, show a warning but don't alert
 	if alarms.flappingAlarms[msg.chain] == nil {
@@ -291,10 +294,11 @@ func (cc *ChainConfig) watch() {
 	nodeAlarms := make(map[string]bool)
 
 	// wait until we have a moniker:
+	noNodesSec := 0 // delay a no-nodes alarm for 30 seconds, too noisy.
 	for {
 		if cc.valInfo == nil || cc.valInfo.Moniker == "not connected" {
 			time.Sleep(time.Second)
-			if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes {
+			if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes && noNodesSec >= 60*td.NodeDownMin {
 				noNodes = true
 				td.alert(
 					cc.name,
@@ -304,8 +308,10 @@ func (cc *ChainConfig) watch() {
 					&cc.valInfo.Valcons,
 				)
 			}
+			noNodesSec += 1
 			continue
 		}
+		noNodesSec = 0
 		break
 	}
 	// initial stat creation for nodes, we only update again if the node is positive
@@ -320,14 +326,21 @@ func (cc *ChainConfig) watch() {
 
 		// alert if we can't monitor
 		if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes {
-			noNodes = true
-			td.alert(
-				cc.name,
-				fmt.Sprintf("no RPC endpoints are working for %s", cc.ChainId),
-				"critical",
-				false,
-				&cc.valInfo.Valcons,
-			)
+			noNodesSec += 2
+			if noNodesSec <= 30*td.NodeDownMin {
+				l(fmt.Sprintf("no nodes available on %s for %d seconds, deferring alarm", cc.ChainId, noNodesSec))
+				noNodes = false
+			} else {
+				noNodesSec = 0
+				noNodes = true
+				td.alert(
+					cc.name,
+					fmt.Sprintf("no RPC endpoints are working for %s", cc.ChainId),
+					"critical",
+					false,
+					&cc.valInfo.Valcons,
+				)
+			}
 		} else if cc.Alerts.AlertIfNoServers && noNodes && !cc.noNodes {
 			noNodes = false
 			td.alert(
@@ -337,6 +350,8 @@ func (cc *ChainConfig) watch() {
 				true,
 				&cc.valInfo.Valcons,
 			)
+		} else {
+			noNodesSec = 0
 		}
 
 		// stalled chain detection
@@ -449,10 +464,11 @@ func (cc *ChainConfig) watch() {
 		// node down alarms
 		for _, node := range cc.Nodes {
 			// window percentage missed block alarms
-			if node.AlertIfDown && node.down && !nodeAlarms[node.Url] && !node.downSince.IsZero() && time.Since(node.downSince) > time.Duration(td.NodeDownMin)*time.Minute {
+			if node.AlertIfDown && node.down && !nodeAlarms[node.Url] && !node.wasDown && !node.downSince.IsZero() &&
+				time.Since(node.downSince) > time.Duration(td.NodeDownMin)*time.Minute {
 				// alert on dead node
+				nodeAlarms[node.Url] = true // used to keep active alert count correct
 				cc.activeAlerts += 1
-				nodeAlarms[node.Url] = true
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
@@ -460,10 +476,11 @@ func (cc *ChainConfig) watch() {
 					false,
 					&node.Url,
 				)
-			} else if nodeAlarms[node.Url] && node.downSince.IsZero() {
+			} else if node.AlertIfDown && node.wasDown {
 				// clear the alert
-				cc.activeAlerts -= 1
 				nodeAlarms[node.Url] = false
+				cc.activeAlerts -= 1
+				node.wasDown = false
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
