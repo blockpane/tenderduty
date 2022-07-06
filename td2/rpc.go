@@ -112,16 +112,13 @@ func (cc *ChainConfig) newRpc() error {
 			Blocks:       cc.blocksResults,
 		}
 	}
-	return errors.New("📵 no usable endpoints available for " + cc.ChainId)
+	return errors.New("no usable endpoints available for " + cc.ChainId)
 }
 
 func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 	tick := time.NewTicker(time.Minute)
 	if cc.client == nil {
-		e := cc.newRpc()
-		if e != nil {
-			l("💥", cc.ChainId, e)
-		}
+		_ = cc.newRpc()
 	}
 
 	for {
@@ -145,7 +142,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 							node.downSince = time.Now()
 						}
 						if td.Prom {
-							td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Now().Sub(node.downSince).Seconds(), node.Url)
+							td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Since(node.downSince).Seconds(), node.Url)
 						}
 						l("⚠️ " + node.lastMsg)
 					}
@@ -173,6 +170,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 					// node's OK, clear the note
 					if node.down {
 						node.lastMsg = ""
+						node.wasDown = true
 					}
 					td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, 0, node.Url)
 					node.down = false

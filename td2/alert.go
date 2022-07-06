@@ -80,15 +80,22 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 		whichMap = alarms.SentDiAlarms
 		service = "Discord"
 	}
-	if !whichMap[msg.message].IsZero() && !msg.resolved {
+
+	switch {
+	case !whichMap[msg.message].IsZero() && !msg.resolved:
 		// already sent this alert
 		return false
-	} else if !whichMap[msg.message].IsZero() && msg.resolved {
+	case !whichMap[msg.message].IsZero() && msg.resolved:
 		// alarm is cleared
 		delete(whichMap, msg.message)
 		l(fmt.Sprintf("💜 Resolved     alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 		return true
+	case msg.resolved:
+		// it looks like we got a duplicate resolution or suppressed it. Note it and move on:
+		l(fmt.Sprintf("😕 Not clearing alarm on %s (%s) - no corresponding alert %s", msg.chain, msg.message, service))
+		return false
 	}
+
 	// check if the alarm is flapping, if we sent the same alert in the last five minutes, show a warning but don't alert
 	if alarms.flappingAlarms[msg.chain] == nil {
 		alarms.flappingAlarms[msg.chain] = make(map[string]time.Time)
@@ -138,11 +145,6 @@ func notifyDiscord(msg *alertMsg) (err error) {
 
 	if resp.StatusCode != 204 {
 		log.Println(resp)
-		//if resp.Body != nil {
-		//	b, _ := ioutil.ReadAll(resp.Body)
-		//	_ = resp.Body.Close()
-		//	fmt.Println(string(b))
-		//}
 		l("notify discord:", err)
 		return err
 	}
@@ -184,7 +186,6 @@ func notifyTg(msg *alertMsg) (err error) {
 	if !shouldNotify(msg, tg) {
 		return nil
 	}
-	//tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	bot, err := tgbotapi.NewBotAPI(msg.tgKey)
 	if err != nil {
 		l("notify telegram:", err)
@@ -197,7 +198,6 @@ func notifyTg(msg *alertMsg) (err error) {
 	}
 
 	mc := tgbotapi.NewMessageToChannel(msg.tgChannel, fmt.Sprintf("%s: %s - %s", msg.chain, prefix, msg.message))
-	//mc.ParseMode = "html"
 	_, err = bot.Send(mc)
 	if err != nil {
 		l("telegram send:", err)
@@ -240,7 +240,6 @@ func getAlarms(chain string) string {
 	alarms.notifyMux.RLock()
 	defer alarms.notifyMux.RUnlock()
 	// don't show this info if the logs are disabled on the dashboard, potentially sensitive info could be leaked.
-	//if td.HideLogs || currentAlarms[chain] == nil {
 	if td.HideLogs || alarms.AllAlarms[chain] == nil {
 		return ""
 	}
@@ -299,10 +298,11 @@ func (cc *ChainConfig) watch() {
 	nodeAlarms := make(map[string]bool)
 
 	// wait until we have a moniker:
+	noNodesSec := 0 // delay a no-nodes alarm for 30 seconds, too noisy.
 	for {
 		if cc.valInfo == nil || cc.valInfo.Moniker == "not connected" {
 			time.Sleep(time.Second)
-			if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes {
+			if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes && noNodesSec >= 60*td.NodeDownMin {
 				noNodes = true
 				td.alert(
 					cc.name,
@@ -312,8 +312,10 @@ func (cc *ChainConfig) watch() {
 					&cc.valInfo.Valcons,
 				)
 			}
+			noNodesSec += 1
 			continue
 		}
+		noNodesSec = 0
 		break
 	}
 	// initial stat creation for nodes, we only update again if the node is positive
@@ -327,16 +329,26 @@ func (cc *ChainConfig) watch() {
 		time.Sleep(2 * time.Second)
 
 		// alert if we can't monitor
-		if cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes {
-			noNodes = true
-			td.alert(
-				cc.name,
-				fmt.Sprintf("no RPC endpoints are working for %s", cc.ChainId),
-				"critical",
-				false,
-				&cc.valInfo.Valcons,
-			)
-		} else if cc.Alerts.AlertIfNoServers && noNodes && !cc.noNodes {
+		switch {
+		case cc.Alerts.AlertIfNoServers && !noNodes && cc.noNodes:
+			noNodesSec += 2
+			if noNodesSec <= 30*td.NodeDownMin {
+				if noNodesSec%20 == 0 {
+					l(fmt.Sprintf("no nodes available on %s for %d seconds, deferring alarm", cc.ChainId, noNodesSec))
+				}
+				noNodes = false
+			} else {
+				noNodesSec = 0
+				noNodes = true
+				td.alert(
+					cc.name,
+					fmt.Sprintf("no RPC endpoints are working for %s", cc.ChainId),
+					"critical",
+					false,
+					&cc.valInfo.Valcons,
+				)
+			}
+		case cc.Alerts.AlertIfNoServers && noNodes && !cc.noNodes:
 			noNodes = false
 			td.alert(
 				cc.name,
@@ -345,6 +357,8 @@ func (cc *ChainConfig) watch() {
 				true,
 				&cc.valInfo.Valcons,
 			)
+		default:
+			noNodesSec = 0
 		}
 
 		// stalled chain detection
@@ -428,7 +442,6 @@ func (cc *ChainConfig) watch() {
 		}
 
 		// window percentage missed block alarms
-		//fmt.Println(100*float64(cc.valInfo.Missed)/float64(cc.valInfo.Window), float64(cc.Alerts.Window))
 		if cc.Alerts.PercentageAlerts && !pctAlarm && 100*float64(cc.valInfo.Missed)/float64(cc.valInfo.Window) > float64(cc.Alerts.Window) {
 			// alert on missed block counter!
 			pctAlarm = true
@@ -458,10 +471,15 @@ func (cc *ChainConfig) watch() {
 		// node down alarms
 		for _, node := range cc.Nodes {
 			// window percentage missed block alarms
-			if node.AlertIfDown && node.down && !nodeAlarms[node.Url] && !node.downSince.IsZero() && time.Now().Sub(node.downSince).Minutes() > float64(td.NodeDownMin) {
+			if node.AlertIfDown && node.down && !node.wasDown && !node.downSince.IsZero() &&
+				time.Since(node.downSince) > time.Duration(td.NodeDownMin)*time.Minute {
 				// alert on dead node
-				cc.activeAlerts += 1
-				nodeAlarms[node.Url] = true
+				if !nodeAlarms[node.Url] {
+					cc.activeAlerts += 1
+				} else {
+					continue
+				}
+				nodeAlarms[node.Url] = true // used to keep active alert count correct
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
@@ -469,10 +487,11 @@ func (cc *ChainConfig) watch() {
 					false,
 					&node.Url,
 				)
-			} else if nodeAlarms[node.Url] && node.downSince.IsZero() {
+			} else if node.AlertIfDown && !node.down && node.wasDown {
 				// clear the alert
-				cc.activeAlerts -= 1
 				nodeAlarms[node.Url] = false
+				cc.activeAlerts -= 1
+				node.wasDown = false
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
@@ -485,11 +504,11 @@ func (cc *ChainConfig) watch() {
 
 		if td.Prom {
 			// raw block timer, ignoring finalized state
-			td.statsChan <- cc.mkUpdate(metricLastBlockSecondsNotFinal, time.Now().Sub(cc.lastBlockTime).Seconds(), "")
+			td.statsChan <- cc.mkUpdate(metricLastBlockSecondsNotFinal, time.Since(cc.lastBlockTime).Seconds(), "")
 			// update node-down times for prometheus
 			for _, node := range cc.Nodes {
 				if node.down && !node.downSince.IsZero() {
-					td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Now().Sub(node.downSince).Seconds(), node.Url)
+					td.statsChan <- cc.mkUpdate(metricNodeDownSeconds, time.Since(node.downSince).Seconds(), node.Url)
 				}
 			}
 		}

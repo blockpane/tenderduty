@@ -13,9 +13,9 @@ import (
 
 var td = &Config{}
 
-func Run(configFile, stateFile string, dumpConfig bool) error {
+func Run(configFile, stateFile string) error {
 	var err error
-	td, err = loadConfig(configFile, stateFile, dumpConfig)
+	td, err = loadConfig(configFile, stateFile)
 	if err != nil {
 		return err
 	}
@@ -56,12 +56,12 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 	}()
 
 	if td.EnableDash {
-		l("starting dashboard on", td.Listen)
 		go dash.Serve(td.Listen, td.updateChan, td.logChan, td.HideLogs)
+		l("starting dashboard on", td.Listen)
 	} else {
 		go func() {
 			for {
-				_ = <-td.updateChan
+				<-td.updateChan
 			}
 		}()
 	}
@@ -70,7 +70,7 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 	} else {
 		go func() {
 			for {
-				_ = <-td.statsChan
+				<-td.statsChan
 			}
 		}()
 	}
@@ -85,7 +85,6 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 			// node health checks:
 			go func() {
 				for {
-					time.Sleep(time.Minute)
 					cc.monitorHealth(td.ctx, name)
 				}
 			}()
@@ -121,7 +120,7 @@ func Run(configFile, stateFile string, dumpConfig bool) error {
 
 func saveOnExit(stateFile string, saved chan interface{}) {
 	quitting := make(chan os.Signal, 1)
-	signal.Notify(quitting, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL)
+	signal.Notify(quitting, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	saveState := func() {
 		defer close(saved)
@@ -141,9 +140,21 @@ func saveOnExit(stateFile string, saved chan interface{}) {
 				blocks[k] = v.blocksResults
 			}
 		}
+		nodesDown := make(map[string]map[string]time.Time)
+		for k, v := range td.Chains {
+			for _, node := range v.Nodes {
+				if node.down {
+					if nodesDown[k] == nil {
+						nodesDown[k] = make(map[string]time.Time)
+					}
+					nodesDown[k][node.Url] = node.downSince
+				}
+			}
+		}
 		b, e := json.Marshal(&savedState{
-			Alarms: alarms,
-			Blocks: blocks,
+			Alarms:    alarms,
+			Blocks:    blocks,
+			NodesDown: nodesDown,
 		})
 		if e != nil {
 			log.Println(e)

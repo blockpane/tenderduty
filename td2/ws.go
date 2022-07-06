@@ -116,7 +116,7 @@ func (cc *ChainConfig) WsRun() {
 				if update.Final {
 					cc.lastBlockNum = update.Height
 					if td.Prom {
-						td.statsChan <- cc.mkUpdate(metricLastBlockSeconds, time.Now().Sub(cc.lastBlockTime).Seconds(), "")
+						td.statsChan <- cc.mkUpdate(metricLastBlockSeconds, time.Since(cc.lastBlockTime).Seconds(), "")
 					}
 					cc.lastBlockTime = time.Now()
 					cc.lastBlockAlarm = false
@@ -157,7 +157,7 @@ func (cc *ChainConfig) WsRun() {
 							info += "\n - " + cc.Nodes[i].lastMsg
 						}
 					}
-					switch true {
+					switch {
 					case cc.valInfo.Tombstoned:
 						info += "- validator is tombstoned\n"
 					case cc.valInfo.Jailed:
@@ -204,9 +204,9 @@ func (cc *ChainConfig) WsRun() {
 
 	blockChan := make(chan *WsReply)
 	go func() {
-		e := handleBlocks(context.Background(), blockChan, resultChan, strings.ToUpper(hex.EncodeToString(cc.valInfo.Conspub)))
+		e := handleBlocks(ctx, blockChan, resultChan, strings.ToUpper(hex.EncodeToString(cc.valInfo.Conspub)))
 		if e != nil {
-			l("🛑", cc.ChainId, e, "attempting to restart client")
+			l("🛑", cc.ChainId, e)
 			cancel()
 		}
 	}()
@@ -233,7 +233,7 @@ func (cc *ChainConfig) WsRun() {
 			case `tendermint/event/Vote`:
 				voteChan <- reply
 			default:
-				//fmt.Println("unknown response", reply.Type())
+				// fmt.Println("unknown response", reply.Type())
 			}
 		}
 	}()
@@ -306,7 +306,7 @@ func handleBlocks(ctx context.Context, blocks chan *WsReply, results chan Status
 		case <-live.C:
 			// no block for a full minute likely means we have either a dead chain, or a dead client.
 			if lastBlock.Before(time.Now().Add(-time.Minute)) {
-				return errors.New("no blocks for more than 1 minute")
+				return errors.New("websocket idle for 1 minute, exiting")
 			}
 		case block := <-blocks:
 			lastBlock = time.Now()
@@ -388,7 +388,7 @@ func NewClient(u string, allowInsecure bool) (*TmConn, error) {
 	// normalize the path, some public rpcs prefix with /rpc or similar.
 	u = strings.TrimRight(u, "/")
 	if !strings.HasSuffix(u, "/websocket") {
-		u = u + "/websocket"
+		u += "/websocket"
 	}
 
 	endpoint, err := url.Parse(u)
@@ -410,19 +410,19 @@ func NewClient(u string, allowInsecure bool) (*TmConn, error) {
 	}
 
 	// allowInsecure is primarily intended for self-signed certs, but it doesn't make sense to allow yes to for non-tls
-	if endpoint.Scheme == "ws" && allowInsecure == false {
+	if endpoint.Scheme == "ws" && !allowInsecure {
 		return nil, errors.New("allowInsecure must be true if protocol is not using TLS")
 	}
 
 	conn := &websocket.Conn{}
 
-	switch true {
+	switch {
 
 	// TODO: add custom UDS dialer
 	case dialUnix:
 
 	// TODO: add custom TLS dialer to allow self-signed certs.
-	//case allowInsecure && endpoint.Scheme == "wss":
+	// case allowInsecure && endpoint.Scheme == "wss":
 
 	default:
 		conn, _, err = websocket.DefaultDialer.Dial(endpoint.String(), nil)

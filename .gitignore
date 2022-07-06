@@ -1,7 +1,9 @@
 config.yml
 docker-compose.yml
 .tenderduty-state.json
+tenderduty-*
 tenderduty
+local*
 
 .idea
 .DS_Store

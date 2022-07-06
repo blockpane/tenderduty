@@ -36,7 +36,6 @@ function lightMode() {
 
 function fix_dpi(id) {
     let canvas = document.getElementById(id),
-        ctx = canvas.getContext('2d'),
         dpi = window.devicePixelRatio;
     gridH = h * dpi.valueOf()
     gridW = w * dpi.valueOf()
