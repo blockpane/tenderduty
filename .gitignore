@@ -3,6 +3,7 @@ config.yml.asc
 docker-compose.yml
 .tenderduty-state.json
 tenderduty-*
+tenderduty
 local*
 
 .idea

@@ -14,12 +14,14 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 )
 
-const showBLocks = 512
+const (
+	showBLocks = 512
+	staleHours = 24
+)
 
 // Config holds both the settings for tenderduty to monitor and state information while running.
 type Config struct {
@@ -63,8 +65,9 @@ type Config struct {
 // savedState is dumped to a JSON file at exit time, and is loaded at start. If successful it will prevent
 // duplicate alerts, and will show old blocks in the dashboard.
 type savedState struct {
-	Alarms *alarmCache      `json:"alarms"`
-	Blocks map[string][]int `json:"blocks"`
+	Alarms    *alarmCache                     `json:"alarms"`
+	Blocks    map[string][]int                `json:"blocks"`
+	NodesDown map[string]map[string]time.Time `json:"nodes_down"`
 }
 
 // ChainConfig represents a validator to be monitored on a chain, it is somewhat of a misnomer since multiple
@@ -174,6 +177,7 @@ type NodeConfig struct {
 	AlertIfDown bool   `yaml:"alert_if_down"`
 
 	down      bool
+	wasDown   bool
 	syncing   bool
 	lastMsg   string
 	downSince time.Time
@@ -222,6 +226,10 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			fatal = true
 			problems = append(problems, "error: The Pagerduty key provided appears to be an Oauth token, not a V2 Events API key.")
 		}
+	}
+
+	if c.NodeDownMin < 3 {
+		problems = append(problems, "warning: setting 'node_down_alert_minutes' to less than three minutes might result in false alarms")
 	}
 
 	// if c.Discord.Enabled {
@@ -280,18 +288,18 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 
 		switch {
 		case v.Alerts.Discord.Enabled && !c.Discord.Enabled:
-			problems = append(problems, fmt.Sprintf("warn: %s is configured for discord alerts, but it is not enabled", k))
+			problems = append(problems, fmt.Sprintf("warn: %20s is configured for discord alerts, but it is not enabled", k))
 			fallthrough
 		case v.Alerts.Pagerduty.Enabled && !c.Pagerduty.Enabled:
-			problems = append(problems, fmt.Sprintf("warn: %s is configured for pagerduty alerts, but it is not enabled", k))
+			problems = append(problems, fmt.Sprintf("warn: %20s is configured for pagerduty alerts, but it is not enabled", k))
 			fallthrough
 		case v.Alerts.Telegram.Enabled && !c.Telegram.Enabled:
-			problems = append(problems, fmt.Sprintf("warn: %s is configured for telegram alerts, but it is not enabled", k))
+			problems = append(problems, fmt.Sprintf("warn: %20s is configured for telegram alerts, but it is not enabled", k))
 		case !v.Alerts.ConsecutiveAlerts && !v.Alerts.PercentageAlerts && !v.Alerts.AlertIfInactive && !v.Alerts.AlertIfNoServers:
-			problems = append(problems, fmt.Sprintf("warn: %s has no alert types configured", k))
+			problems = append(problems, fmt.Sprintf("warn: %20s has no alert types configured", k))
 			fallthrough
 		case !v.Alerts.Pagerduty.Enabled && !v.Alerts.Discord.Enabled && !v.Alerts.Telegram.Enabled:
-			problems = append(problems, fmt.Sprintf("warn: %s has no notifications configured", k))
+			problems = append(problems, fmt.Sprintf("warn: %20s has no notifications configured", k))
 		}
 		if td.EnableDash {
 			td.updateChan <- &dash.ChainStatus{
@@ -385,9 +393,10 @@ func loadConfig(yamlFile, stateFile string, password *string) (*Config, error) {
 	}
 
 	c.alertChan = make(chan *alertMsg)
-	c.logChan = make(chan dash.LogMessage, 32)
-	c.updateChan = make(chan *dash.ChainStatus, 32)
-	c.statsChan = make(chan *promUpdate, 32)
+	c.logChan = make(chan dash.LogMessage)
+	// buffer enough to get through validateConfig()
+	c.updateChan = make(chan *dash.ChainStatus, len(c.Chains)*2)
+	c.statsChan = make(chan *promUpdate, len(c.Chains)*2)
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
 	// handle cached data. FIXME: incomplete.
@@ -424,29 +433,68 @@ func loadConfig(yamlFile, stateFile string, password *string) (*Config, error) {
 	if saved.Alarms != nil {
 		if saved.Alarms.SentTgAlarms != nil {
 			alarms.SentTgAlarms = saved.Alarms.SentTgAlarms
+			clearStale(alarms.SentTgAlarms, "telegram", c.Pagerduty.Enabled, staleHours)
 		}
 		if saved.Alarms.SentPdAlarms != nil {
 			alarms.SentPdAlarms = saved.Alarms.SentPdAlarms
+			clearStale(alarms.SentPdAlarms, "PagerDuty", c.Pagerduty.Enabled, staleHours)
 		}
 		if saved.Alarms.SentDiAlarms != nil {
 			alarms.SentDiAlarms = saved.Alarms.SentDiAlarms
+			clearStale(alarms.SentDiAlarms, "Discord", c.Pagerduty.Enabled, staleHours)
 		}
 		if saved.Alarms.AllAlarms != nil {
 			alarms.AllAlarms = saved.Alarms.AllAlarms
 			for _, alrm := range saved.Alarms.AllAlarms {
-				for k := range alrm {
-					if alrm[k].Before(time.Now().Add(-24 * time.Hour)) {
-						l("📁 not restoring old alarm (>24 hours) from cache -", k)
-						continue
-					} else if strings.HasPrefix(k, "no RPC endpoints are working") {
-						// silently skip the no nodes available alarms
-						delete(alrm, k)
+				clearStale(alrm, "dashboard", c.Pagerduty.Enabled, staleHours)
+			}
+		}
+	}
+
+	// we need to know if the node was already down to clear alarms
+	if saved.NodesDown != nil {
+		for k, v := range saved.NodesDown {
+			for nodeUrl := range v {
+				if !v[nodeUrl].IsZero() {
+					if c.Chains[k] != nil {
+						for j := range c.Chains[k].Nodes {
+							if c.Chains[k].Nodes[j].Url == nodeUrl {
+								c.Chains[k].Nodes[j].down = true
+								c.Chains[k].Nodes[j].wasDown = true
+								c.Chains[k].Nodes[j].downSince = v[nodeUrl]
+							}
+						}
 					}
-					l("📂 restored alarm state -", k)
 				}
+			}
+		}
+		// now we need to know if all RPC endpoints were down.
+		for k, v := range c.Chains {
+			downCount := 0
+			for j := range v.Nodes {
+				if v.Nodes[j].down {
+					downCount += 1
+				}
+			}
+			if downCount == len(c.Chains[k].Nodes) {
+				c.Chains[k].noNodes = true
 			}
 		}
 	}
 
 	return c, nil
+}
+
+func clearStale(alarms map[string]time.Time, what string, hasPagerduty bool, hours float64) {
+	for k := range alarms {
+		if time.Since(alarms[k]).Hours() >= hours {
+			l(fmt.Sprintf("🗑 not restoring old alarm (%v >%.2f hours) from cache - %s", alarms[k], hours, k))
+			if hasPagerduty && what == "pagerduty" {
+				l("NOTE: stale alarms may need to be manually cleared from PagerDuty!")
+			}
+			delete(alarms, k)
+			continue
+		}
+		l("📂 restored %s alarm state -", what, k)
+	}
 }
