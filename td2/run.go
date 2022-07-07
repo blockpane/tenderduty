@@ -56,8 +56,8 @@ func Run(configFile, stateFile string) error {
 	}()
 
 	if td.EnableDash {
-		l("starting dashboard on", td.Listen)
 		go dash.Serve(td.Listen, td.updateChan, td.logChan, td.HideLogs)
+		l("starting dashboard on", td.Listen)
 	} else {
 		go func() {
 			for {
@@ -85,7 +85,6 @@ func Run(configFile, stateFile string) error {
 			// node health checks:
 			go func() {
 				for {
-					time.Sleep(time.Minute)
 					cc.monitorHealth(td.ctx, name)
 				}
 			}()
@@ -141,9 +140,21 @@ func saveOnExit(stateFile string, saved chan interface{}) {
 				blocks[k] = v.blocksResults
 			}
 		}
+		nodesDown := make(map[string]map[string]time.Time)
+		for k, v := range td.Chains {
+			for _, node := range v.Nodes {
+				if node.down {
+					if nodesDown[k] == nil {
+						nodesDown[k] = make(map[string]time.Time)
+					}
+					nodesDown[k][node.Url] = node.downSince
+				}
+			}
+		}
 		b, e := json.Marshal(&savedState{
-			Alarms: alarms,
-			Blocks: blocks,
+			Alarms:    alarms,
+			Blocks:    blocks,
+			NodesDown: nodesDown,
 		})
 		if e != nil {
 			log.Println(e)

@@ -204,9 +204,9 @@ func (cc *ChainConfig) WsRun() {
 
 	blockChan := make(chan *WsReply)
 	go func() {
-		e := handleBlocks(context.Background(), blockChan, resultChan, strings.ToUpper(hex.EncodeToString(cc.valInfo.Conspub)))
+		e := handleBlocks(ctx, blockChan, resultChan, strings.ToUpper(hex.EncodeToString(cc.valInfo.Conspub)))
 		if e != nil {
-			l("🛑", cc.ChainId, e, "attempting to restart client")
+			l("🛑", cc.ChainId, e)
 			cancel()
 		}
 	}()
@@ -306,7 +306,7 @@ func handleBlocks(ctx context.Context, blocks chan *WsReply, results chan Status
 		case <-live.C:
 			// no block for a full minute likely means we have either a dead chain, or a dead client.
 			if lastBlock.Before(time.Now().Add(-time.Minute)) {
-				return errors.New("no blocks for more than 1 minute")
+				return errors.New("websocket idle for 1 minute, exiting")
 			}
 		case block := <-blocks:
 			lastBlock = time.Now()
