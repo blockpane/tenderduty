@@ -50,7 +50,7 @@ func main() {
 			password = string(pass)
 			pass = nil
 		}
-	
+
 		var e error
 		if encryptConfig {
 			e = td2.EncryptedConfig(configFile, encryptedFile, password, false)
