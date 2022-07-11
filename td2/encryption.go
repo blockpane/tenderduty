@@ -15,7 +15,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"runtime"
 )
 
 const (
@@ -49,7 +48,7 @@ func getKey(pass string, knownSalt []byte) (key, macKey, salt []byte, err error)
 	}
 
 	// double the key size so we have a symmetric key and a mac key
-	keys := argon2.IDKey([]byte(pass), knownSalt, idTime, idMem, uint8(runtime.NumCPU()), idKeySize*2)
+	keys := argon2.IDKey([]byte(pass), knownSalt, idTime, idMem, 1, idKeySize*2)
 	if len(keys) != idKeySize*2 || bytes.Equal(keys, bytes.Repeat([]byte{0}, idKeySize*2)) {
 		err = errors.New("invalid key, was all zeros")
 		return
@@ -149,7 +148,6 @@ func decrypt(encodedFile []byte, password string) (plainText []byte, err error) 
 
 	authText := cipherText[:len(cipherText)-macSize]
 
-	_ = macKey
 	// authenticate
 	auth := hmac.New(sha256.New, macKey)
 	_, err = auth.Write(authText)

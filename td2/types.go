@@ -10,6 +10,7 @@ import (
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -359,6 +360,7 @@ func loadConfig(yamlFile, stateFile string, password *string) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
+		log.Printf("downloaded %d bytes from %s", len(b), yamlFile)
 		decrypted, err := decrypt(b, *password)
 		if err != nil {
 			return nil, err
