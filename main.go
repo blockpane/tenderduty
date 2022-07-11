@@ -35,21 +35,22 @@ func main() {
 		configFile = os.Getenv("CONFIG")
 	}
 
+	if os.Getenv("PASSWORD") != "" {
+		password = os.Getenv("PASSWORD")
+	}
+
 	if encryptConfig || decryptConfig {
 		if password == "" {
-			if os.Getenv("PASSWORD") != "" {
-				password = os.Getenv("PASSWORD")
-			} else {
-				fmt.Print("Please enter the encryption password: ")
-				pass, err := term.ReadPassword(int(syscall.Stdin))
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println("")
-				password = string(pass)
-				pass = nil
+			fmt.Print("Please enter the encryption password: ")
+			pass, err := term.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				log.Fatal(err)
 			}
+			fmt.Println("")
+			password = string(pass)
+			pass = nil
 		}
+	
 		var e error
 		if encryptConfig {
 			e = td2.EncryptedConfig(configFile, encryptedFile, password, false)
