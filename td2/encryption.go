@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-passwd/validator"
-	"github.com/tendermint/crypto/argon2"
+	"golang.org/x/crypto/argon2"
 	"io"
 	"log"
 	"os"
