@@ -150,7 +150,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 					if e != nil {
 						alert(e.Error())
 					}
-					cwt, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+					cwt, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					status, e := c.Status(cwt)
 					cancel()
 					if e != nil {
