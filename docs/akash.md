@@ -43,7 +43,7 @@ profiles:
         cpu:
           units: 1
         memory:
-          size: 128Mi
+          size: 256Mi
         storage:
           size: 100Mi
   placement:
