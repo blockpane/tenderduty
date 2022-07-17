@@ -70,7 +70,7 @@ function updateTable(status) {
         if (status.Status[i].active_alerts > 0 || status.Status[i].last_error !== "") {
             if (status.Status[i].last_error !== "") {
                 alerts = `
-            <a href="#modal-center-${status.Status[i].name}" uk-toggle><span uk-icon='warning' uk-tooltip="${_.escape(status.Status[i].active_alerts)} active issues" style='color: darkorange'></span></a>
+            <a href="#modal-center-${_.escape(status.Status[i].name)}" uk-toggle><span uk-icon='warning' uk-tooltip="${_.escape(status.Status[i].active_alerts)} active issues" style='color: darkorange'></span></a>
             <div id="modal-center-${_.escape(status.Status[i].name)}" class="uk-flex-top" uk-modal>
                 <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical uk-background-secondary">
                     <button class="uk-modal-close-default" type="button" uk-close></button>
