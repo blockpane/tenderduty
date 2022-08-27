@@ -15,7 +15,7 @@ services:
     command: ""
     expose:
       - 8888   # Dashboard
-      - 28686 # Prometheus exporter
+      - 28686  # Prometheus exporter
     volumes:
       - home:/var/lib/tenderduty
       - ./config.yml:/var/lib/tenderduty/config.yml
@@ -35,6 +35,7 @@ services:
       - "443:443"
       - "443:443/udp"
       - "8888:8888"
+      - "28686:28686"
     volumes:
       - ./caddy:/etc/caddy
       - caddy_data:/data
