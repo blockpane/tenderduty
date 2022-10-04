@@ -5,7 +5,7 @@ COPY . /build/app
 WORKDIR /build/app
 
 RUN go get ./... && go build -ldflags "-s -w" -trimpath -o tenderduty main.go
-RUN upx --best tenderduty && upx -t tenderduty
+RUN upx tenderduty && upx -t tenderduty
 
 # 2nd stage, create a user to copy, and install libraries needed if connecting to upstream TLS server
 # we don't want the /lib and /lib64 from the go container cause it has more than we need.

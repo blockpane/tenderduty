@@ -30,7 +30,7 @@ func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 	if cc.client == nil {
 		return errors.New("nil rpc client")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if cc.valInfo == nil {

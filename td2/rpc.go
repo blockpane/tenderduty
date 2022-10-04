@@ -16,7 +16,7 @@ import (
 // newRpc sets up the rpc client used for monitoring. It will try nodes in order until a working node is found.
 // it will also get some initial info on the validator's status.
 func (cc *ChainConfig) newRpc() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	var anyWorking bool // if healthchecks are running, we will skip to the first known good node.
 	for _, endpoint := range cc.Nodes {
@@ -150,7 +150,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 					if e != nil {
 						alert(e.Error())
 					}
-					cwt, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+					cwt, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					status, e := c.Status(cwt)
 					cancel()
 					if e != nil {
