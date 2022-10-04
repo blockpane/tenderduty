@@ -1,0 +1,23 @@
+{
+    # email to use on Let's Encrypt
+    email youremail@email.com
+
+    # Uncomment for debug
+    #acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    #debug
+}
+
+# tenderduty v2 
+:8888 {
+    reverse_proxy tenderduty:8888
+}
+
+# prometheus metrics
+:28686 {
+    reverse_proxy tenderduty:28686
+}
+
+# how to setup with your website
+# tenderduty.mysite.com {
+#     reverse_proxy tenderduty:28686
+# }
