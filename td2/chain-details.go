@@ -126,11 +126,11 @@ func refreshRegistry() error {
 	if err != nil {
 		return err
 	}
-	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
+	_ = res.Body.Close()
 	chains := &registryResults{}
 	err = json.Unmarshal(body, chains)
 	if err != nil {

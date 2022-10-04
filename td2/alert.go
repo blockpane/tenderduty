@@ -141,7 +141,7 @@ func notifyDiscord(msg *alertMsg) (err error) {
 		l("notify discord:", err)
 		return err
 	}
-	defer resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != 204 {
 		log.Println(resp)

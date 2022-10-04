@@ -382,11 +382,11 @@ func loadConfig(yamlFile, stateFile, chainConfigDirectory string, password *stri
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
+		_ = resp.Body.Close()
 		log.Printf("downloaded %d bytes from %s", len(b), yamlFile)
 		decrypted, err := decrypt(b, *password)
 		if err != nil {

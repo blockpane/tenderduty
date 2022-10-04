@@ -218,11 +218,11 @@ func guessPublicEndpoint(u string) string {
 	if err != nil {
 		return u
 	}
-	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return u
 	}
+	_ = resp.Body.Close()
 	matches := endpointRex.FindStringSubmatch(string(b))
 	if len(matches) < 2 {
 		// didn't work

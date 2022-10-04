@@ -94,6 +94,7 @@ func (cc *ChainConfig) WsRun() {
 		cancel()
 		return
 	}
+	defer cc.wsclient.Close()
 	err = cc.wsclient.SetCompressionLevel(3)
 	if err != nil {
 		log.Println(err)
