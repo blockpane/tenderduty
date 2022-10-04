@@ -171,7 +171,7 @@ func buildDiscordMessage(msg *alertMsg) *DiscordMessage {
 		prefix = "💜 Resolved: "
 	}
 	return &DiscordMessage{
-		Username: "tenderuty",
+		Username: "Tenderduty",
 		Content:  prefix + msg.chain,
 		Embeds: []DiscordEmbed{{
 			Description: msg.message,
