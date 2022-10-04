@@ -92,6 +92,7 @@ func (cc *ChainConfig) newRpc() error {
 		}
 	}
 	cc.noNodes = true
+	alarms.clearAll(cc.name)
 	cc.lastError = "no usable RPC endpoints available for " + cc.ChainId
 	if td.EnableDash {
 		td.updateChan <- &dash.ChainStatus{

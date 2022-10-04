@@ -164,6 +164,7 @@ func (cc *ChainConfig) WsRun() {
 					case cc.valInfo.Jailed:
 						info += "- validator is jailed\n"
 					}
+					cc.activeAlerts = alarms.getCount(cc.name)
 					if td.EnableDash {
 						td.updateChan <- &dash.ChainStatus{
 							MsgType:      "status",
