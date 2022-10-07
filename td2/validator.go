@@ -162,11 +162,12 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 	}
 	var pk CryptoKey
 	var keyType string = val.Validator.ConsensusPubkey.TypeUrl
-	if keyType == "/cosmos.crypto.ed25519.PubKey" {
+	switch keyType {
+	case "/cosmos.crypto.ed25519.PubKey":
 		pk = &ed25519.PubKey{}
-	} else if keyType == "/cosmos.crypto.secp256k1.PubKey" {
+	case "/cosmos.crypto.secp256k1.PubKey":
 		pk = &secp256k1.PubKey{}
-	} else {
+	default:
 		pk = &secp256r1.PubKey{}
 	}
 	err = pk.Unmarshal(val.Validator.ConsensusPubkey.Value)
