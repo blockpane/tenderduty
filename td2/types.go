@@ -94,6 +94,7 @@ type ChainConfig struct {
 	statPrevoteMiss     float64
 	statPrecommitMiss   float64
 	statConsecutiveMiss float64
+	lastOracleMissAlert uint64
 
 	// ChainId is used to ensure any endpoints contacted claim to be on the correct chain. This is a weak verification,
 	// no light client validation is performed, so caution is advised when using public endpoints.
@@ -112,8 +113,12 @@ type ChainConfig struct {
 	// PublicFallback determines if tenderduty should attempt to use public RPC endpoints in the situation that not
 	// explicitly defined RPC servers are available. Not recommended.
 	PublicFallback bool `yaml:"public_fallback"`
+	// Price Oralce on this chain
+	KujiraPriceOracle bool `yaml:"kujira_price_oracle"`
 	// Nodes defines what RPC servers to connect to.
 	Nodes []*NodeConfig `yaml:"nodes"`
+	// info for wallet monitoring
+	Wallets []*WalletConfig `yaml:"wallets"`
 }
 
 // mkUpdate returns the info needed by prometheus for a gauge.
@@ -126,6 +131,31 @@ func (cc *ChainConfig) mkUpdate(t metricType, v float64, node string) *promUpdat
 		moniker:  cc.valInfo.Moniker,
 		endpoint: node,
 	}
+}
+
+// PriceOracleConfig defines the information required to monitor the price oracle.
+type PriceOracleConfig struct {
+	// address of oracle account
+	OracleAddress string `yaml:"oracle_address"`
+	// minimum balance wallet must hold in nnnnuDenom format
+	OracleMinimumBalance int64 `yaml:"oracle_minimum_balance"`
+	// denom we care about
+	OracleDenom string `yaml:"denom"`
+}
+
+// WalletConfig defines the information required to monitor the price oracle.
+type WalletConfig struct {
+	WalletName string `yaml:"name"`
+	// address of oracle account
+	WalletAddress string `yaml:"address"`
+	// minimum balance wallet must hold in nnnnuDenom format
+	WalletMinimumBalance int64 `yaml:"minimum_balance"`
+	// denom we care about
+	WalletDenom string `yaml:"denom"`
+	// actual balance
+	balance  int64
+	recorded bool
+	prior    bool
 }
 
 // AlertConfig defines the type of alerts to send for a ChainConfig
