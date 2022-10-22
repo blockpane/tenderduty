@@ -467,6 +467,57 @@ func (cc *ChainConfig) watch() {
 				&id,
 			)
 		}
+		for _, wallet := range cc.Wallets {
+			id := wallet.WalletAddress + "balance"
+			if wallet.recorded && wallet.balance <= wallet.WalletMinimumBalance {
+				l(fmt.Sprintf("alert here %s %t %t", wallet.WalletName, wallet.prior, wallet.recorded))
+				td.alert(
+					cc.name,
+					fmt.Sprintf("%s %s wallet %s/%s has a balance below minimum", cc.ChainId, cc.valInfo.Moniker, wallet.WalletName, wallet.WalletAddress),
+					"critical",
+					false,
+					&id,
+				)
+				wallet.prior = true
+			} else {
+				if wallet.prior {
+					l(fmt.Sprintf("resolved here %s %t %t", wallet.WalletName, wallet.prior, wallet.recorded))
+					td.alert(
+						cc.name,
+						fmt.Sprintf("%s %s wallet %s/%s has a balance below minimum", cc.ChainId, cc.valInfo.Moniker, wallet.WalletName, wallet.WalletAddress),
+						"critical",
+						true,
+						&id,
+					)
+					wallet.prior = false
+				}
+			}
+		}
+		if cc.KujiraPriceOracle {
+			if cc.lastValInfo != nil && cc.valInfo.OracleMissed > cc.lastValInfo.OracleMissed {
+				id := cc.ValAddress + "oracle_miss"
+				td.alert(
+					cc.name,
+					fmt.Sprintf("%s %s price oracle miss", cc.ChainId, cc.valInfo.Moniker),
+					"critical",
+					false,
+					&id,
+				)
+
+			} else {
+				id := cc.ValAddress + "oracle_miss"
+				if cc.lastValInfo != nil && cc.lastValInfo.OracleMissed >= cc.lastOracleMissAlert {
+					cc.lastOracleMissAlert = cc.valInfo.OracleMissed
+					td.alert(
+						cc.name,
+						fmt.Sprintf("%s %s price oracle miss", cc.ChainId, cc.valInfo.Moniker),
+						"critical",
+						true,
+						&id,
+					)
+				}
+			}
+		}
 
 		// node down alarms
 		for _, node := range cc.Nodes {

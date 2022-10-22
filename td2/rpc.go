@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	oracle "github.com/Team-Kujira/core/x/oracle/types"
 	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
+	banking "github.com/cosmos/cosmos-sdk/x/bank/types"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"
 	"net/http"
@@ -189,19 +191,73 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 			}
 			if cc.valInfo != nil {
 				cc.lastValInfo = &ValInfo{
-					Moniker:    cc.valInfo.Moniker,
-					Bonded:     cc.valInfo.Bonded,
-					Jailed:     cc.valInfo.Jailed,
-					Tombstoned: cc.valInfo.Tombstoned,
-					Missed:     cc.valInfo.Missed,
-					Window:     cc.valInfo.Window,
-					Conspub:    cc.valInfo.Conspub,
-					Valcons:    cc.valInfo.Valcons,
+					Moniker:      cc.valInfo.Moniker,
+					Bonded:       cc.valInfo.Bonded,
+					Jailed:       cc.valInfo.Jailed,
+					Tombstoned:   cc.valInfo.Tombstoned,
+					Missed:       cc.valInfo.Missed,
+					Window:       cc.valInfo.Window,
+					Conspub:      cc.valInfo.Conspub,
+					Valcons:      cc.valInfo.Valcons,
+					OracleMissed: cc.valInfo.OracleMissed,
 				}
 			}
 			err = cc.GetValInfo(false)
 			if err != nil {
 				l("❓ refreshing signing info for", cc.ValAddress, err)
+			}
+			for _, wallet := range cc.Wallets {
+				go func(wallet *WalletConfig) {
+					qParams := banking.QueryBalanceRequest{Address: wallet.WalletAddress, Denom: wallet.WalletDenom}
+					b, err := qParams.Marshal()
+					resp, err := cc.client.ABCIQuery(ctx, "/cosmos.bank.v1beta1.Query/Balance", b)
+					if resp == nil || resp.Response.Value == nil {
+						err = errors.New(fmt.Sprintf("🛑 could not get wallet balance for %s, got empty response", wallet.WalletName))
+						return
+					}
+					params := &banking.QueryBalanceResponse{}
+					err = params.Unmarshal(resp.Response.Value)
+					if err != nil {
+						return
+					}
+					wallet.recorded = true
+					wallet.balance = params.Balance.Amount.Int64()
+
+					if wallet.balance < wallet.WalletMinimumBalance {
+						l(fmt.Sprintf("❌ %s/%s %d > %d wallet balance below threshold", wallet.WalletName, wallet.WalletAddress, wallet.WalletMinimumBalance, wallet.balance))
+					} else {
+						l(fmt.Sprintf("OK %s/%s %d <= %d wallet balance above threshold", wallet.WalletName, wallet.WalletAddress, wallet.WalletMinimumBalance, wallet.balance))
+					}
+
+				}(wallet)
+			}
+			if cc.KujiraPriceOracle {
+				qParams := oracle.QueryMissCounterRequest{ValidatorAddr: cc.ValAddress}
+				b, err := qParams.Marshal()
+				resp, err := cc.client.ABCIQuery(ctx, "/kujira.oracle.Query/MissCounter", b)
+				if err != nil {
+					l(err.Error())
+					return
+				}
+				if resp == nil || resp.Response.Value == nil {
+					err = errors.New("🛑 could not get oracle Miss counter, got empty response")
+					return
+				}
+
+				params := &oracle.QueryMissCounterResponse{}
+				err = params.Unmarshal(resp.Response.Value)
+				if err != nil {
+					return
+				}
+				if params.MissCounter > cc.lastValInfo.OracleMissed {
+					l(fmt.Sprintf("❌ miss count %d %d", params.MissCounter, cc.valInfo.OracleMissed))
+				} else {
+					l(fmt.Sprintf("OK miss count %d %d", params.MissCounter, cc.valInfo.OracleMissed))
+				}
+				cc.valInfo.OracleMissed = params.MissCounter
+			} else {
+				cc.lastOracleMissAlert = 0
+				cc.valInfo.OracleMissed = 0
 			}
 		}
 	}

@@ -15,14 +15,15 @@ import (
 
 // ValInfo holds most of the stats/info used for secondary alarms. It is refreshed roughly every minute.
 type ValInfo struct {
-	Moniker    string `json:"moniker"`
-	Bonded     bool   `json:"bonded"`
-	Jailed     bool   `json:"jailed"`
-	Tombstoned bool   `json:"tombstoned"`
-	Missed     int64  `json:"missed"`
-	Window     int64  `json:"window"`
-	Conspub    []byte `json:"conspub"`
-	Valcons    string `json:"valcons"`
+	Moniker      string `json:"moniker"`
+	Bonded       bool   `json:"bonded"`
+	Jailed       bool   `json:"jailed"`
+	Tombstoned   bool   `json:"tombstoned"`
+	Missed       int64  `json:"missed"`
+	Window       int64  `json:"window"`
+	Conspub      []byte `json:"conspub"`
+	Valcons      string `json:"valcons"`
+	OracleMissed uint64 `json:"oracle_missed"`
 }
 
 // GetValInfo the first bool is used to determine if extra information about the validator should be printed.
