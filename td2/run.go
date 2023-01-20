@@ -3,19 +3,20 @@ package tenderduty
 import (
 	"encoding/json"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
 )
 
 var td = &Config{}
 
-func Run(configFile, stateFile string) error {
+func Run(configFile, stateFile, chainConfigDirectory string, password *string) error {
 	var err error
-	td, err = loadConfig(configFile, stateFile)
+	td, err = loadConfig(configFile, stateFile, chainConfigDirectory, password)
 	if err != nil {
 		return err
 	}

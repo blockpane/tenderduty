@@ -4,16 +4,22 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
 	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
 	"github.com/go-yaml/yaml"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	"io"
-	"net/url"
-	"os"
-	"regexp"
-	"sync"
-	"time"
 )
 
 const (
@@ -338,9 +344,7 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 	return
 }
 
-// loadConfig creates a new Config from a file.
-func loadConfig(yamlFile, stateFile string) (*Config, error) {
-
+func loadChainConfig(yamlFile string) (*ChainConfig, error) {
 	//#nosec -- variable specified on command line
 	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
 	if e != nil {
@@ -357,10 +361,101 @@ func loadConfig(yamlFile, stateFile string) (*Config, error) {
 	if e != nil {
 		return nil, e
 	}
-	c := &Config{}
+	c := &ChainConfig{}
 	e = yaml.Unmarshal(b, c)
 	if e != nil {
 		return nil, e
+	}
+	return c, nil
+}
+
+// loadConfig creates a new Config from a file.
+func loadConfig(yamlFile, stateFile, chainConfigDirectory string, password *string) (*Config, error) {
+
+	c := &Config{}
+	if strings.HasPrefix(yamlFile, "http://") || strings.HasPrefix(yamlFile, "https://") {
+		if *password == "" {
+			return nil, errors.New("a password is required if loading a remote configuration")
+		}
+		//#nosec -- url is specified on command line
+		resp, err := http.Get(yamlFile)
+		if err != nil {
+			return nil, err
+		}
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		_ = resp.Body.Close()
+		log.Printf("downloaded %d bytes from %s", len(b), yamlFile)
+		decrypted, err := decrypt(b, *password)
+		if err != nil {
+			return nil, err
+		}
+		empty := ""
+		password = &empty             // let gc get password out of memory, it's still referenced in main()
+		_ = os.Setenv("PASSWORD", "") // also clear the ENV var
+		err = yaml.Unmarshal(decrypted, c)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		//#nosec -- variable specified on command line
+		f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
+		if e != nil {
+			return nil, e
+		}
+		i, e := f.Stat()
+		if e != nil {
+			_ = f.Close()
+			return nil, e
+		}
+		b := make([]byte, int(i.Size()))
+		_, e = f.Read(b)
+		_ = f.Close()
+		if e != nil {
+			return nil, e
+		}
+		e = yaml.Unmarshal(b, c)
+		if e != nil {
+			return nil, e
+		}
+	}
+
+	// Load additional chain configuration files
+	chainConfigFiles, e := os.ReadDir(chainConfigDirectory)
+	if e != nil {
+		l("Failed to scan chainConfigDirectory", e)
+	}
+
+	for _, chainConfigFile := range chainConfigFiles {
+		if chainConfigFile.IsDir() {
+			l("Skipping Directory: ", chainConfigFile.Name())
+			continue
+		}
+		if !strings.HasSuffix(chainConfigFile.Name(), ".yml") {
+			l("Skipping non .yml file: ", chainConfigFile.Name())
+			continue
+		}
+		fmt.Println("Reading Chain Config File: ", chainConfigFile.Name())
+		chainConfig, e := loadChainConfig(path.Join(chainConfigDirectory, chainConfigFile.Name()))
+		if e != nil {
+			l(fmt.Sprintf("Failed to read %s", chainConfigFile), e)
+			return nil, e
+		}
+
+		chainName := strings.Split(chainConfigFile.Name(), ".")[0]
+
+		// Create map if it didnt exist in config.yml
+		if c.Chains == nil {
+			c.Chains = make(map[string]*ChainConfig)
+		}
+		c.Chains[chainName] = chainConfig
+		l(fmt.Sprintf("Added %s from ", chainName), chainConfigFile.Name())
+	}
+
+	if len(c.Chains) == 0 {
+		return nil, errors.New("no chains configured")
 	}
 
 	c.alertChan = make(chan *alertMsg)
@@ -384,7 +479,7 @@ func loadConfig(yamlFile, stateFile string) (*Config, error) {
 	if e != nil {
 		l("could not load saved state", e.Error())
 	}
-	b, e = io.ReadAll(sf)
+	b, e := io.ReadAll(sf)
 	_ = sf.Close()
 	if e != nil {
 		l("could not read saved state", e.Error())

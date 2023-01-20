@@ -12,6 +12,8 @@ This is a tool for validators running tendermint nodes. It sends notifications w
 - [Setting up Discord](discord.md)
 - TODO: [Setting up Telegram](telegram.md)
 - [Prometheus Exports](prometheus.md)
+- [Remotely Configuring Tenderduty](remote.md)
+- [Running on Akash](akash.md)
 
 ## What does it do?
 
@@ -38,6 +40,15 @@ A dashboard for displaying status.
 - Optionally shows a real-time stream of log messages with details about ongoing health checks.
 
 ![dashboard screenshot](dash.png)
+
+## System Requirements:
+
+* CPU: minimum of 1 core
+* Memory: 128MB minimum, 256MB strongly recommended for containers.
+* Bandwidth: 
+  * Inbound: ~500KiB/s per-validator. Ex: monitoring 16 validators consumes 8MiB/s inbound.
+  * Outbound: negligible, ~5-10 KiB/s per validator.
+* Storage: ~60MB for the Docker container, ~35MB for binary alone. The cache file should be only a few KB.
 
 ## How does it work?
 

@@ -51,6 +51,37 @@ type alarmCache struct {
 	notifyMux      sync.RWMutex
 }
 
+func (a *alarmCache) clearNoBlocks(chain string) {
+	if a.AllAlarms == nil || a.AllAlarms[chain] == nil {
+		return
+	}
+	a.notifyMux.Lock()
+	defer a.notifyMux.Unlock()
+	for clearAlarm := range a.AllAlarms[chain] {
+		if strings.HasPrefix(clearAlarm, "stalled: have not seen a new block on") {
+			delete(a.AllAlarms[chain], clearAlarm)
+		}
+	}
+}
+
+func (a *alarmCache) getCount(chain string) int {
+	if a.AllAlarms == nil || a.AllAlarms[chain] == nil {
+		return 0
+	}
+	a.notifyMux.RLock()
+	defer a.notifyMux.RUnlock()
+	return len(a.AllAlarms[chain])
+}
+
+func (a *alarmCache) clearAll(chain string) {
+	if a.AllAlarms == nil || a.AllAlarms[chain] == nil {
+		return
+	}
+	a.notifyMux.Lock()
+	defer a.notifyMux.Unlock()
+	a.AllAlarms[chain] = make(map[string]time.Time)
+}
+
 // alarms is used to prevent double notifications. TODO: save on exit / load on start
 var alarms = &alarmCache{
 	SentPdAlarms:   make(map[string]time.Time),
@@ -125,27 +156,27 @@ func notifyDiscord(msg *alertMsg) (err error) {
 	client := &http.Client{}
 	data, err := json.MarshalIndent(discPost, "", "  ")
 	if err != nil {
-		l("notify discord:", err)
+		l("⚠️ Could not notify discord!", err)
 		return err
 	}
 
 	req, err := http.NewRequest("POST", msg.discHook, bytes.NewBuffer(data))
 	if err != nil {
-		l("notify discord:", err)
+		l("⚠️ Could not notify discord!", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		l("notify discord:", err)
+		l("⚠️ Could not notify discord!", err)
 		return err
 	}
-	defer resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != 204 {
 		log.Println(resp)
-		l("notify discord:", err)
+		l("⚠️ Could not notify discord! Returned", resp.StatusCode)
 		return err
 	}
 	return nil
@@ -171,7 +202,7 @@ func buildDiscordMessage(msg *alertMsg) *DiscordMessage {
 		prefix = "💜 Resolved: "
 	}
 	return &DiscordMessage{
-		Username: "tenderuty",
+		Username: "Tenderduty",
 		Content:  prefix + msg.chain,
 		Embeds: []DiscordEmbed{{
 			Description: msg.message,
@@ -383,6 +414,7 @@ func (cc *ChainConfig) watch() {
 				true,
 				&cc.valInfo.Valcons,
 			)
+			alarms.clearNoBlocks(cc.name)
 		}
 
 		// jailed detection - only alert if it changes.
@@ -418,7 +450,6 @@ func (cc *ChainConfig) watch() {
 		if !missedAlarm && cc.Alerts.ConsecutiveAlerts && int(cc.statConsecutiveMiss) >= cc.Alerts.ConsecutiveMissed {
 			// alert on missed block counter!
 			missedAlarm = true
-			cc.activeAlerts += 1
 			id := cc.valInfo.Valcons + "consecutive"
 			td.alert(
 				cc.name,
@@ -427,10 +458,10 @@ func (cc *ChainConfig) watch() {
 				false,
 				&id,
 			)
+			cc.activeAlerts = alarms.getCount(cc.name)
 		} else if missedAlarm && int(cc.statConsecutiveMiss) < cc.Alerts.ConsecutiveMissed {
 			// clear the alert
 			missedAlarm = false
-			cc.activeAlerts -= 1
 			id := cc.valInfo.Valcons + "consecutive"
 			td.alert(
 				cc.name,
@@ -439,6 +470,7 @@ func (cc *ChainConfig) watch() {
 				true,
 				&id,
 			)
+			cc.activeAlerts = alarms.getCount(cc.name)
 		}
 
 		// window percentage missed block alarms
@@ -446,7 +478,6 @@ func (cc *ChainConfig) watch() {
 			// alert on missed block counter!
 			pctAlarm = true
 			id := cc.valInfo.Valcons + "percent"
-			cc.activeAlerts += 1
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
@@ -454,11 +485,11 @@ func (cc *ChainConfig) watch() {
 				false,
 				&id,
 			)
+			cc.activeAlerts = alarms.getCount(cc.name)
 		} else if cc.Alerts.PercentageAlerts && pctAlarm && 100*float64(cc.valInfo.Missed)/float64(cc.valInfo.Window) < float64(cc.Alerts.Window) {
 			// clear the alert
 			pctAlarm = false
 			id := cc.valInfo.Valcons + "percent"
-			cc.activeAlerts -= 1
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
@@ -466,6 +497,7 @@ func (cc *ChainConfig) watch() {
 				false,
 				&id,
 			)
+			cc.activeAlerts = alarms.getCount(cc.name)
 		}
 
 		// node down alarms
@@ -475,7 +507,7 @@ func (cc *ChainConfig) watch() {
 				time.Since(node.downSince) > time.Duration(td.NodeDownMin)*time.Minute {
 				// alert on dead node
 				if !nodeAlarms[node.Url] {
-					cc.activeAlerts += 1
+					cc.activeAlerts = alarms.getCount(cc.name)
 				} else {
 					continue
 				}
@@ -490,7 +522,6 @@ func (cc *ChainConfig) watch() {
 			} else if node.AlertIfDown && !node.down && node.wasDown {
 				// clear the alert
 				nodeAlarms[node.Url] = false
-				cc.activeAlerts -= 1
 				node.wasDown = false
 				td.alert(
 					cc.name,
@@ -499,6 +530,7 @@ func (cc *ChainConfig) watch() {
 					true,
 					&node.Url,
 				)
+				cc.activeAlerts = alarms.getCount(cc.name)
 			}
 		}
 
