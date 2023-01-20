@@ -141,7 +141,11 @@ func Serve(port string, updates chan *ChainStatus, logs chan LogMessage, hideLog
 	})
 
 	http.Handle("/", &CacheHandler{})
-	err = http.ListenAndServe(":"+port, nil)
+	server := &http.Server{
+		Addr:              ":" + port,
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+	err = server.ListenAndServe()
 	cast.Discard()
 	log.Fatal("tenderduty dashboard server failed", err)
 }

@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -368,28 +370,56 @@ func loadChainConfig(yamlFile string) (*ChainConfig, error) {
 }
 
 // loadConfig creates a new Config from a file.
-func loadConfig(yamlFile, stateFile, chainConfigDirectory string) (*Config, error) {
+func loadConfig(yamlFile, stateFile, chainConfigDirectory string, password *string) (*Config, error) {
 
-	//#nosec -- variable specified on command line
-	f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
-	if e != nil {
-		return nil, e
-	}
-	i, e := f.Stat()
-	if e != nil {
-		_ = f.Close()
-		return nil, e
-	}
-	b := make([]byte, int(i.Size()))
-	_, e = f.Read(b)
-	_ = f.Close()
-	if e != nil {
-		return nil, e
-	}
 	c := &Config{}
-	e = yaml.Unmarshal(b, c)
-	if e != nil {
-		return nil, e
+	if strings.HasPrefix(yamlFile, "http://") || strings.HasPrefix(yamlFile, "https://") {
+		if *password == "" {
+			return nil, errors.New("a password is required if loading a remote configuration")
+		}
+		//#nosec -- url is specified on command line
+		resp, err := http.Get(yamlFile)
+		if err != nil {
+			return nil, err
+		}
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		_ = resp.Body.Close()
+		log.Printf("downloaded %d bytes from %s", len(b), yamlFile)
+		decrypted, err := decrypt(b, *password)
+		if err != nil {
+			return nil, err
+		}
+		empty := ""
+		password = &empty             // let gc get password out of memory, it's still referenced in main()
+		_ = os.Setenv("PASSWORD", "") // also clear the ENV var
+		err = yaml.Unmarshal(decrypted, c)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		//#nosec -- variable specified on command line
+		f, e := os.OpenFile(yamlFile, os.O_RDONLY, 0600)
+		if e != nil {
+			return nil, e
+		}
+		i, e := f.Stat()
+		if e != nil {
+			_ = f.Close()
+			return nil, e
+		}
+		b := make([]byte, int(i.Size()))
+		_, e = f.Read(b)
+		_ = f.Close()
+		if e != nil {
+			return nil, e
+		}
+		e = yaml.Unmarshal(b, c)
+		if e != nil {
+			return nil, e
+		}
 	}
 
 	// Load additional chain configuration files
@@ -425,7 +455,7 @@ func loadConfig(yamlFile, stateFile, chainConfigDirectory string) (*Config, erro
 	}
 
 	if len(c.Chains) == 0 {
-		return nil, errors.New("No Chains Configured")
+		return nil, errors.New("no chains configured")
 	}
 
 	c.alertChan = make(chan *alertMsg)
@@ -449,7 +479,7 @@ func loadConfig(yamlFile, stateFile, chainConfigDirectory string) (*Config, erro
 	if e != nil {
 		l("could not load saved state", e.Error())
 	}
-	b, e = io.ReadAll(sf)
+	b, e := io.ReadAll(sf)
 	_ = sf.Close()
 	if e != nil {
 		l("could not read saved state", e.Error())

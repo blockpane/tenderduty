@@ -1,4 +1,5 @@
 config.yml
+config.yml.asc
 docker-compose.yml
 .tenderduty-state.json
 tenderduty-*

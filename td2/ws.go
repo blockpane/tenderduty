@@ -94,6 +94,7 @@ func (cc *ChainConfig) WsRun() {
 		cancel()
 		return
 	}
+	defer cc.wsclient.Close()
 	err = cc.wsclient.SetCompressionLevel(3)
 	if err != nil {
 		log.Println(err)
@@ -163,6 +164,7 @@ func (cc *ChainConfig) WsRun() {
 					case cc.valInfo.Jailed:
 						info += "- validator is jailed\n"
 					}
+					cc.activeAlerts = alarms.getCount(cc.name)
 					if td.EnableDash {
 						td.updateChan <- &dash.ChainStatus{
 							MsgType:      "status",
@@ -300,6 +302,7 @@ func (rb rawBlock) find(val string) bool {
 // responsible for stalled chain detection and will shutdown the client if there are no blocks for a minute.
 func handleBlocks(ctx context.Context, blocks chan *WsReply, results chan StatusUpdate, address string) error {
 	live := time.NewTicker(time.Minute)
+	defer live.Stop()
 	lastBlock := time.Now()
 	for {
 		select {
