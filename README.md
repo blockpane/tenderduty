@@ -67,3 +67,8 @@ For example start directly with:
 chain_id: demo-1
     valoper_address: demovaloper...
 ```
+
+## Contributions
+
+Contributions are welcome, please open pull requests against the 'develop' branch, not main.
+
