@@ -65,7 +65,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	err := td2.Run(configFile, stateFile, chainConfigDirectory, &encryptedFile)
+	err := td2.Run(configFile, stateFile, chainConfigDirectory, &password)
 	if err != nil {
 		log.Println(err.Error(), "... exiting.")
 	}
