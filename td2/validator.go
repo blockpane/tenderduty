@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
+	"github.com/tendermint/tendermint/crypto"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	slashing "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -12,6 +15,12 @@ import (
 	"strings"
 	"time"
 )
+
+type CryptoKey interface {
+	Marshal() (dAtA []byte, err error)
+	Unmarshal(dAtA []byte) error
+	Address() crypto.Address
+}
 
 // ValInfo holds most of the stats/info used for secondary alarms. It is refreshed roughly every minute.
 type ValInfo struct {
@@ -151,7 +160,16 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 	if err != nil {
 		return
 	}
-	pk := ed25519.PubKey{}
+	var pk CryptoKey
+	var keyType string = val.Validator.ConsensusPubkey.TypeUrl
+	switch keyType {
+	case "/cosmos.crypto.ed25519.PubKey":
+		pk = &ed25519.PubKey{}
+	case "/cosmos.crypto.secp256k1.PubKey":
+		pk = &secp256k1.PubKey{}
+	default:
+		pk = &secp256r1.PubKey{}
+	}
 	err = pk.Unmarshal(val.Validator.ConsensusPubkey.Value)
 	if err != nil {
 		return
