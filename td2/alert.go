@@ -203,16 +203,12 @@ func buildSlackMessage(msg *alertMsg) *SlackMessage {
 		prefix = "💜 Resolved: "
 		color = "good"
 	}
-	//title := fmt.Sprintf("%s %s", prefix, msg.chain)
 	return &SlackMessage{
 		Text: msg.message,
 		Attachments: []Attachment{
 			Attachment{
-				//Text:      fmt.Sprintf("%s %s %s", prefix, msg.chain, msg.slkMentions),
 				Title:      fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
 				Color:     color,
-				//Title:     prefix,
-				//TitleLink: link,
 			},
 		},
 	}
