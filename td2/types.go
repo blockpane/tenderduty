@@ -60,6 +60,8 @@ type Config struct {
 	Discord DiscordConfig `yaml:"discord"`
 	// Telegram api information
 	Telegram TeleConfig `yaml:"telegram"`
+	// Slack webhook information
+	Slack SlackConfig `yaml:"slack"`
 
 	chainsMux sync.RWMutex // prevents concurrent map access for Chains
 	// Chains has settings for each validator to monitor. The map's name does not need to match the chain-id.
@@ -173,6 +175,8 @@ type AlertConfig struct {
 	Discord DiscordConfig `yaml:"discord"`
 	// Telegram webhook information
 	Telegram TeleConfig `yaml:"telegram"`
+	// Slack webhook information
+	Slack SlackConfig `yaml:"slack"`
 }
 
 // NodeConfig holds the basic information for a node to connect to.
@@ -199,7 +203,6 @@ type DiscordConfig struct {
 	Enabled  bool     `yaml:"enabled"`
 	Webhook  string   `yaml:"webhook"`
 	Mentions []string `yaml:"mentions"`
-	// TODO
 }
 
 // TeleConfig holds the information needed to publish to a Telegram webhook for sending alerts
@@ -208,7 +211,13 @@ type TeleConfig struct {
 	ApiKey   string   `yaml:"api_key"`
 	Channel  string   `yaml:"channel"`
 	Mentions []string `yaml:"mentions"`
-	// TODO
+}
+
+// SlackConfig holds the information needed to publish to a Slack webhook for sending alerts
+type SlackConfig struct {
+	Enabled  bool     `yaml:"enabled"`
+	Webhook  string   `yaml:"webhook"`
+	Mentions []string `yaml:"mentions"`
 }
 
 // validateConfig is a non-exhaustive check for common problems with the configuration. Needs love.
@@ -235,14 +244,6 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 	if c.NodeDownMin < 3 {
 		problems = append(problems, "warning: setting 'node_down_alert_minutes' to less than three minutes might result in false alarms")
 	}
-
-	// if c.Discord.Enabled {
-	// 	// TODO
-	// }
-
-	// if c.Telegram.Enabled {
-	// 	// TODO
-	// }
 
 	var wantsPublic bool
 	for k, v := range c.Chains {
@@ -278,6 +279,10 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 			v.Alerts.Discord.Webhook = c.Discord.Webhook
 			v.Alerts.Discord.Mentions = c.Discord.Mentions
 		}
+		if v.Alerts.Slack.Webhook == "" {
+			v.Alerts.Slack.Webhook = c.Slack.Webhook
+			v.Alerts.Slack.Mentions = c.Slack.Mentions
+		}
 		if v.Alerts.Telegram.ApiKey == "" {
 			v.Alerts.Telegram.ApiKey = c.Telegram.ApiKey
 			v.Alerts.Telegram.Mentions = c.Telegram.Mentions
@@ -291,6 +296,9 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		}
 
 		switch {
+		case v.Alerts.Slack.Enabled && !c.Slack.Enabled:
+			problems = append(problems, fmt.Sprintf("warn: %20s is configured for slack alerts, but it is not enabled", k))
+			fallthrough
 		case v.Alerts.Discord.Enabled && !c.Discord.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %20s is configured for discord alerts, but it is not enabled", k))
 			fallthrough
@@ -302,7 +310,7 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		case !v.Alerts.ConsecutiveAlerts && !v.Alerts.PercentageAlerts && !v.Alerts.AlertIfInactive && !v.Alerts.AlertIfNoServers:
 			problems = append(problems, fmt.Sprintf("warn: %20s has no alert types configured", k))
 			fallthrough
-		case !v.Alerts.Pagerduty.Enabled && !v.Alerts.Discord.Enabled && !v.Alerts.Telegram.Enabled:
+		case !v.Alerts.Pagerduty.Enabled && !v.Alerts.Discord.Enabled && !v.Alerts.Telegram.Enabled && !v.Alerts.Slack.Enabled:
 			problems = append(problems, fmt.Sprintf("warn: %20s has no notifications configured", k))
 		}
 		if td.EnableDash {
@@ -467,11 +475,12 @@ func loadConfig(yamlFile, stateFile, chainConfigDirectory string, password *stri
 
 	// handle cached data. FIXME: incomplete.
 	c.alarms = &alarmCache{
-		SentPdAlarms: make(map[string]time.Time),
-		SentTgAlarms: make(map[string]time.Time),
-		SentDiAlarms: make(map[string]time.Time),
-		AllAlarms:    make(map[string]map[string]time.Time),
-		notifyMux:    sync.RWMutex{},
+		SentPdAlarms:  make(map[string]time.Time),
+		SentTgAlarms:  make(map[string]time.Time),
+		SentDiAlarms:  make(map[string]time.Time),
+		SentSlkAlarms: make(map[string]time.Time),
+		AllAlarms:     make(map[string]map[string]time.Time),
+		notifyMux:     sync.RWMutex{},
 	}
 
 	//#nosec -- variable specified on command line
@@ -508,6 +517,10 @@ func loadConfig(yamlFile, stateFile, chainConfigDirectory string, password *stri
 		if saved.Alarms.SentDiAlarms != nil {
 			alarms.SentDiAlarms = saved.Alarms.SentDiAlarms
 			clearStale(alarms.SentDiAlarms, "Discord", c.Pagerduty.Enabled, staleHours)
+		}
+		if saved.Alarms.SentSlkAlarms != nil {
+			alarms.SentSlkAlarms = saved.Alarms.SentSlkAlarms
+			clearStale(alarms.SentSlkAlarms, "Slack", c.Pagerduty.Enabled, staleHours)
 		}
 		if saved.Alarms.AllAlarms != nil {
 			alarms.AllAlarms = saved.Alarms.AllAlarms

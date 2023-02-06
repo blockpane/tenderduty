@@ -41,6 +41,13 @@ telegram:
   # The group ID for the chat where messages will be sent. Google how to find this, will include better info later.
   channel: "-666666666"
 
+# Slack settings
+slack:
+  # Send alerts to Slack?
+  enabled: no
+  # The webhook can be added in the Slack app directory.
+  webhook: https://hooks.slack.com/services/AAAAAAAAAAAAAAAAAAAAAAA/bbbbbbbbbbbbbbbbbbbbbbbb
+
 # The various chains to be monitored. Create a new entry for each chain. The name itself can be arbitrary, but a
 # user-friendly name is recommended.
 chains:
@@ -102,6 +109,11 @@ chains:
         enabled: yes
         api_key: "" # uses default if blank
         channel: "" # uses default if blank
+
+      # Slack settings
+      slack:
+          enabled: yes
+          webhook: "" # uses default if blank
 
     # This section covers our RPC providers. No LCD (aka REST) endpoints are used, only TM's RPC endpoints
     # Multiple hosts are encouraged, and will be tried sequentially until a working endpoint is discovered.
