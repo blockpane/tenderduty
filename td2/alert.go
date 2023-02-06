@@ -18,6 +18,7 @@ type alertMsg struct {
 	pd   bool
 	disc bool
 	tg   bool
+	slk  bool
 
 	severity string
 	resolved bool
@@ -32,6 +33,9 @@ type alertMsg struct {
 
 	discHook     string
 	discMentions string
+
+	slkHook      string
+	slkMentions  string
 }
 
 type notifyDest uint8
@@ -40,12 +44,14 @@ const (
 	pd notifyDest = iota
 	tg
 	di
+	slk
 )
 
 type alarmCache struct {
 	SentPdAlarms   map[string]time.Time            `json:"sent_pd_alarms"`
 	SentTgAlarms   map[string]time.Time            `json:"sent_tg_alarms"`
 	SentDiAlarms   map[string]time.Time            `json:"sent_di_alarms"`
+	SentSlkAlarms  map[string]time.Time            `json:"sent_slk_alarms"`
 	AllAlarms      map[string]map[string]time.Time `json:"sent_all_alarms"`
 	flappingAlarms map[string]map[string]time.Time
 	notifyMux      sync.RWMutex
@@ -87,6 +93,7 @@ var alarms = &alarmCache{
 	SentPdAlarms:   make(map[string]time.Time),
 	SentTgAlarms:   make(map[string]time.Time),
 	SentDiAlarms:   make(map[string]time.Time),
+	SentSlkAlarms:  make(map[string]time.Time),
 	AllAlarms:      make(map[string]map[string]time.Time),
 	flappingAlarms: make(map[string]map[string]time.Time),
 	notifyMux:      sync.RWMutex{},
@@ -110,6 +117,9 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 	case di:
 		whichMap = alarms.SentDiAlarms
 		service = "Discord"
+	case slk:
+		whichMap = alarms.SentSlkAlarms
+		service = "Slack"
 	}
 
 	switch {
@@ -143,6 +153,65 @@ func shouldNotify(msg *alertMsg, dest notifyDest) bool {
 	l(fmt.Sprintf("🚨 ALERT        new alarm on %s (%s) - notifying %s", msg.chain, msg.message, service))
 	whichMap[msg.message] = time.Now()
 	return true
+}
+
+func notifySlack(msg *alertMsg) (err error) {
+	if !msg.slk {
+		return
+	}
+	data, err := json.Marshal(buildSlackMessage(msg))
+	if err != nil {
+		return
+	}
+
+	req, err := http.NewRequest("POST", msg.slkHook, bytes.NewBuffer(data))
+	if err != nil {
+		return
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("could not notify slack for %s got %d response", msg.chain, resp.StatusCode)
+	}
+
+	return
+}
+
+type SlackMessage struct {
+	Text        string       `json:"text"`
+	Attachments []Attachment `json:"attachments"`
+}
+
+type Attachment struct {
+	Text      string `json:"text"`
+	Color     string `json:"color"`
+	Title     string `json:"title"`
+	TitleLink string `json:"title_link"`
+}
+
+func buildSlackMessage(msg *alertMsg) *SlackMessage {
+	prefix := "🚨 ALERT: "
+	color := "danger"
+	if msg.resolved {
+		msg.message = "OK: " + msg.message
+		prefix = "💜 Resolved: "
+		color = "good"
+	}
+	return &SlackMessage{
+		Text: msg.message,
+		Attachments: []Attachment{
+			Attachment{
+				Title:      fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
+				Color:     color,
+			},
+		},
+	}
 }
 
 func notifyDiscord(msg *alertMsg) (err error) {
@@ -292,6 +361,7 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 		pd:           c.Pagerduty.Enabled && c.Chains[chainName].Alerts.Pagerduty.Enabled,
 		disc:         c.Discord.Enabled && c.Chains[chainName].Alerts.Discord.Enabled,
 		tg:           c.Telegram.Enabled && c.Chains[chainName].Alerts.Telegram.Enabled,
+		slk:          c.Slack.Enabled && c.Chains[chainName].Alerts.Slack.Enabled,
 		severity:     severity,
 		resolved:     resolved,
 		chain:        chainName,
@@ -303,6 +373,7 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 		tgMentions:   strings.Join(c.Chains[chainName].Alerts.Telegram.Mentions, " "),
 		discHook:     c.Chains[chainName].Alerts.Discord.Webhook,
 		discMentions: strings.Join(c.Chains[chainName].Alerts.Discord.Mentions, " "),
+		slkHook:      c.Chains[chainName].Alerts.Slack.Webhook,
 	}
 	c.alertChan <- a
 	c.chainsMux.RUnlock()
