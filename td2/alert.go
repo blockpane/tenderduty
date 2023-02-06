@@ -174,7 +174,7 @@ func notifySlack(msg *alertMsg) (err error) {
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
+	_ = resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("could not notify slack for %s got %d response", msg.chain, resp.StatusCode)
