@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	slashing "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -151,10 +152,30 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 	if err != nil {
 		return
 	}
-	pk := ed25519.PubKey{}
-	err = pk.Unmarshal(val.Validator.ConsensusPubkey.Value)
-	if err != nil {
-		return
+	if val.Validator.ConsensusPubkey == nil {
+		return nil, "", false, false, errors.New("got invalid consensus pubkey for " + valoper)
 	}
-	return pk.Address().Bytes(), val.Validator.GetMoniker(), val.Validator.Jailed, val.Validator.Status == 3, nil
+
+	var pubBytes []byte
+	switch val.Validator.ConsensusPubkey.TypeUrl {
+	case "/cosmos.crypto.ed25519.PubKey":
+		pk := ed25519.PubKey{}
+		err = pk.Unmarshal(val.Validator.ConsensusPubkey.Value)
+		if err != nil {
+			return
+		}
+		pubBytes = pk.Address().Bytes()
+	case "/cosmos.crypto.secp256k1.PubKey":
+		pk := secp256k1.PubKey{}
+		err = pk.Unmarshal(val.Validator.ConsensusPubkey.Value)
+		if err != nil {
+			return
+		}
+		pubBytes = pk.Address().Bytes()
+	}
+	if pubBytes == nil || len(pubBytes) == 0 {
+		return nil, "", false, false, errors.New("could not get pubkey for" + valoper)
+	}
+
+	return pubBytes, val.Validator.GetMoniker(), val.Validator.Jailed, val.Validator.Status == 3, nil
 }
