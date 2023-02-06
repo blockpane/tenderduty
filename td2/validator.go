@@ -156,7 +156,7 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 		return nil, "", false, false, errors.New("got invalid consensus pubkey for " + valoper)
 	}
 
-	var pubBytes []byte
+	pubBytes := make([]byte, 0)
 	switch val.Validator.ConsensusPubkey.TypeUrl {
 	case "/cosmos.crypto.ed25519.PubKey":
 		pk := ed25519.PubKey{}
@@ -173,7 +173,7 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 		}
 		pubBytes = pk.Address().Bytes()
 	}
-	if pubBytes == nil || len(pubBytes) == 0 {
+	if len(pubBytes) == 0 {
 		return nil, "", false, false, errors.New("could not get pubkey for" + valoper)
 	}
 
