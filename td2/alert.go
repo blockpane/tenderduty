@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/PagerDuty/go-pagerduty"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PagerDuty/go-pagerduty"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type alertMsg struct {
@@ -34,8 +35,8 @@ type alertMsg struct {
 	discHook     string
 	discMentions string
 
-	slkHook      string
-	slkMentions  string
+	slkHook     string
+	slkMentions string
 }
 
 type notifyDest uint8
@@ -207,8 +208,8 @@ func buildSlackMessage(msg *alertMsg) *SlackMessage {
 		Text: msg.message,
 		Attachments: []Attachment{
 			Attachment{
-				Title:      fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
-				Color:     color,
+				Title: fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
+				Color: color,
 			},
 		},
 	}
@@ -569,6 +570,33 @@ func (cc *ChainConfig) watch() {
 				&id,
 			)
 			cc.activeAlerts = alarms.getCount(cc.name)
+		}
+
+		for _, wallet := range cc.Wallets {
+			id := wallet.WalletAddress + "balance"
+			if wallet.recorded && wallet.balance <= wallet.WalletMinimumBalance {
+				l(fmt.Sprintf("alert here %s %t %t", wallet.WalletName, wallet.prior, wallet.recorded))
+				td.alert(
+					cc.name,
+					fmt.Sprintf("%s %s wallet %s/%s has a balance below minimum", cc.ChainId, cc.valInfo.Moniker, wallet.WalletName, wallet.WalletAddress),
+					"critical",
+					false,
+					&id,
+				)
+				wallet.prior = true
+			} else {
+				if wallet.prior {
+					l(fmt.Sprintf("resolved here %s %t %t", wallet.WalletName, wallet.prior, wallet.recorded))
+					td.alert(
+						cc.name,
+						fmt.Sprintf("%s %s wallet %s/%s has a balance below minimum", cc.ChainId, cc.valInfo.Moniker, wallet.WalletName, wallet.WalletAddress),
+						"critical",
+						true,
+						&id,
+					)
+					wallet.prior = false
+				}
+			}
 		}
 
 		// node down alarms

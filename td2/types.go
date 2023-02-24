@@ -118,6 +118,23 @@ type ChainConfig struct {
 	PublicFallback bool `yaml:"public_fallback"`
 	// Nodes defines what RPC servers to connect to.
 	Nodes []*NodeConfig `yaml:"nodes"`
+	// info for wallet monitoring
+	Wallets []*WalletConfig `yaml:"wallets"`
+}
+
+// WalletConfig defines the information required to monitor the price oracle.
+type WalletConfig struct {
+	WalletName string `yaml:"name"`
+	// address of oracle account
+	WalletAddress string `yaml:"address"`
+	// minimum balance wallet must hold in nnnnuDenom format
+	WalletMinimumBalance int64 `yaml:"minimum_balance"`
+	// denom we care about
+	WalletDenom string `yaml:"denom"`
+	// actual balance
+	balance  int64
+	recorded bool
+	prior    bool
 }
 
 // mkUpdate returns the info needed by prometheus for a gauge.
