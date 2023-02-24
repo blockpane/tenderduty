@@ -574,10 +574,10 @@ func (cc *ChainConfig) watch() {
 
 		for _, wallet := range cc.Wallets {
 			id := wallet.WalletAddress + "balance"
-			if wallet.recorded && wallet.balance <= wallet.WalletMinimumBalance {
+			if !wallet.prior && wallet.recorded && wallet.balance <= wallet.WalletMinimumBalance {
 				td.alert(
 					cc.name,
-					fmt.Sprintf("%s %s wallet %s/%s has a balance of %d%s", cc.ChainId, cc.valInfo.Moniker, wallet.WalletName, wallet.WalletAddress, wallet.balance, wallet.WalletDenom),
+					fmt.Sprintf("%s wallet %s/%s has a balance of %d%s", cc.ChainId, wallet.WalletName, wallet.WalletAddress, wallet.balance, wallet.WalletDenom),
 					"critical",
 					false,
 					&id,
@@ -588,7 +588,7 @@ func (cc *ChainConfig) watch() {
 					l(fmt.Sprintf("resolved here %s %t %t", wallet.WalletName, wallet.prior, wallet.recorded))
 					td.alert(
 						cc.name,
-						fmt.Sprintf("%s %s wallet %s/%s balance recovered", cc.ChainId, cc.valInfo.Moniker, wallet.WalletName, wallet.WalletAddress),
+						fmt.Sprintf("%s wallet %s/%s balance recovered", cc.ChainId, wallet.WalletName, wallet.WalletAddress),
 						"critical",
 						true,
 						&id,
