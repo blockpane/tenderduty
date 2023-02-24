@@ -63,6 +63,12 @@ chains:
     # This isn't always reliable, not all public nodes have websocket proxying setup correctly.
     public_fallback: no
 
+    wallets:
+      - name: relayer
+        address: osmo18xrruhq5r246mwk0yj9elnn3mxxx...
+        minimum_balance: 5000000
+        denom: uosmo
+
     # Controls various alert settings for each chain.
     alerts:
       # If the chain stops seeing new blocks, should an alert be sent?
