@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/PagerDuty/go-pagerduty"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PagerDuty/go-pagerduty"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type alertMsg struct {
@@ -34,8 +35,8 @@ type alertMsg struct {
 	discHook     string
 	discMentions string
 
-	slkHook      string
-	slkMentions  string
+	slkHook     string
+	slkMentions string
 }
 
 type notifyDest uint8
@@ -206,9 +207,9 @@ func buildSlackMessage(msg *alertMsg) *SlackMessage {
 	return &SlackMessage{
 		Text: msg.message,
 		Attachments: []Attachment{
-			Attachment{
-				Title:      fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
-				Color:     color,
+			{
+				Title: fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
+				Color: color,
 			},
 		},
 	}
@@ -586,7 +587,7 @@ func (cc *ChainConfig) watch() {
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
-					"critical",
+					td.NodeDownSeverity,
 					false,
 					&node.Url,
 				)
@@ -597,7 +598,7 @@ func (cc *ChainConfig) watch() {
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
-					"info",
+					td.NodeDownSeverity,
 					true,
 					&node.Url,
 				)
