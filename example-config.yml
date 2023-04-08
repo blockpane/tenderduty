@@ -10,6 +10,8 @@ listen_port: 8888
 hide_logs: no
 # How long to wait before alerting that a node is down.
 node_down_alert_minutes: 3
+# Node Down alert Pagerduty Severity
+node_down_alert_severity: "critical"
 
 # Should the prometheus exporter be enabled?
 prometheus_enabled: yes
@@ -74,7 +76,7 @@ chains:
       consecutive_enabled: yes
       # How many missed blocks should trigger a notification?
       consecutive_missed: 5
-      # NOT USED: future hint for pagerduty's routing
+      # Consecutive Missed alert Pagerduty Severity
       consecutive_priority: critical
 
       # For each chain there is a specific window of blocks and a percentage of missed blocks that will result in
@@ -82,7 +84,7 @@ chains:
       percentage_enabled: no
       # What percentage should trigger the alert
       percentage_missed: 10
-      # Not used yet, pagerduty routing hint
+      # Percentage Missed alert Pagerduty Severity
       percentage_priority: warning
 
       # Should an alert be sent if the validator is not in the active set ie, jailed,
