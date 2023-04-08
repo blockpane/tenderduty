@@ -482,7 +482,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("stalled: have not seen a new block on %s in %d minutes", cc.ChainId, cc.Alerts.Stalled),
-				"critical",
+				"info",
 				true,
 				&cc.valInfo.Valcons,
 			)
@@ -526,7 +526,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed %d blocks on %s", cc.valInfo.Moniker, cc.Alerts.ConsecutiveMissed, cc.ChainId),
-				"critical",
+				cc.Alerts.ConsecutivePriority,
 				false,
 				&id,
 			)
@@ -538,7 +538,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed %d blocks on %s", cc.valInfo.Moniker, cc.Alerts.ConsecutiveMissed, cc.ChainId),
-				"critical",
+				"info",
 				true,
 				&id,
 			)
@@ -553,7 +553,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
-				"critical",
+				cc.Alerts.PercentagePriority,
 				false,
 				&id,
 			)
@@ -565,7 +565,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
-				"critical",
+				"info",
 				false,
 				&id,
 			)
@@ -598,7 +598,7 @@ func (cc *ChainConfig) watch() {
 				td.alert(
 					cc.name,
 					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
-					td.NodeDownSeverity,
+					"info",
 					true,
 					&node.Url,
 				)
