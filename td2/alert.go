@@ -586,7 +586,7 @@ func (cc *ChainConfig) watch() {
 				nodeAlarms[node.Url] = true // used to keep active alert count correct
 				td.alert(
 					cc.name,
-					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
+					fmt.Sprintf("Severity: %s\nRPC node %s has been down for > %d minutes on %s", td.NodeDownSeverity, node.Url, td.NodeDownMin, cc.ChainId),
 					td.NodeDownSeverity,
 					false,
 					&node.Url,
@@ -597,7 +597,7 @@ func (cc *ChainConfig) watch() {
 				node.wasDown = false
 				td.alert(
 					cc.name,
-					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
+					fmt.Sprintf("Severity: %s\nRPC node %s has been down for > %d minutes on %s", td.NodeDownSeverity, node.Url, td.NodeDownMin, cc.ChainId),
 					"info",
 					true,
 					&node.Url,
