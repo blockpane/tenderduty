@@ -48,6 +48,8 @@ type Config struct {
 	// NodeDownMin controls how long we wait before sending an alert that a node is not responding or has
 	// fallen behind.
 	NodeDownMin int `yaml:"node_down_alert_minutes"`
+	// NodeDownSeverity controls the Pagerduty severity when notifying if a node is down.
+	NodeDownSeverity string `yaml:"node_down_alert_severity"`
 
 	// Prom controls if the prometheus exporter is enabled.
 	Prom bool `yaml:"prometheus_enabled"`
