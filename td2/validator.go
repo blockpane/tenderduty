@@ -2,16 +2,18 @@ package tenderduty
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	slashing "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	staking "github.com/cosmos/cosmos-sdk/x/staking/types"
 	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
-	"strings"
-	"time"
 )
 
 // ValInfo holds most of the stats/info used for secondary alarms. It is refreshed roughly every minute.
@@ -133,6 +135,16 @@ func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 
 // getVal returns the public key, moniker, and if the validator is jailed.
 func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []byte, moniker string, jailed, bonded bool, err error) {
+	if strings.Contains(valoper, "valcons") {
+		_, bz, err := bech32.DecodeAndConvert(valoper)
+		if err != nil {
+			return nil, "", false, false, errors.New("could not decode and convert your address" + valoper)
+		}
+
+		hexAddress := fmt.Sprintf("%X", bz)
+		return ToBytes(hexAddress), "Cosmostation", false, true, nil
+	}
+
 	q := staking.QueryValidatorRequest{
 		ValidatorAddr: valoper,
 	}
@@ -178,4 +190,9 @@ func getVal(ctx context.Context, client *rpchttp.HTTP, valoper string) (pub []by
 	}
 
 	return pubBytes, val.Validator.GetMoniker(), val.Validator.Jailed, val.Validator.Status == 3, nil
+}
+
+func ToBytes(address string) []byte {
+	bz, _ := hex.DecodeString(strings.ToLower(address))
+	return bz
 }
