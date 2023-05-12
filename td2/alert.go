@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/PagerDuty/go-pagerduty"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PagerDuty/go-pagerduty"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type alertMsg struct {
@@ -34,8 +35,8 @@ type alertMsg struct {
 	discHook     string
 	discMentions string
 
-	slkHook      string
-	slkMentions  string
+	slkHook     string
+	slkMentions string
 }
 
 type notifyDest uint8
@@ -206,9 +207,9 @@ func buildSlackMessage(msg *alertMsg) *SlackMessage {
 	return &SlackMessage{
 		Text: msg.message,
 		Attachments: []Attachment{
-			Attachment{
-				Title:      fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
-				Color:     color,
+			{
+				Title: fmt.Sprintf("TenderDuty %s %s %s", prefix, msg.chain, msg.slkMentions),
+				Color: color,
 			},
 		},
 	}
@@ -481,7 +482,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("stalled: have not seen a new block on %s in %d minutes", cc.ChainId, cc.Alerts.Stalled),
-				"critical",
+				"info",
 				true,
 				&cc.valInfo.Valcons,
 			)
@@ -525,7 +526,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed %d blocks on %s", cc.valInfo.Moniker, cc.Alerts.ConsecutiveMissed, cc.ChainId),
-				"critical",
+				cc.Alerts.ConsecutivePriority,
 				false,
 				&id,
 			)
@@ -537,7 +538,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed %d blocks on %s", cc.valInfo.Moniker, cc.Alerts.ConsecutiveMissed, cc.ChainId),
-				"critical",
+				"info",
 				true,
 				&id,
 			)
@@ -552,7 +553,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
-				"critical",
+				cc.Alerts.PercentagePriority,
 				false,
 				&id,
 			)
@@ -564,7 +565,7 @@ func (cc *ChainConfig) watch() {
 			td.alert(
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
-				"critical",
+				"info",
 				false,
 				&id,
 			)
@@ -585,8 +586,8 @@ func (cc *ChainConfig) watch() {
 				nodeAlarms[node.Url] = true // used to keep active alert count correct
 				td.alert(
 					cc.name,
-					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
-					"critical",
+					fmt.Sprintf("Severity: %s\nRPC node %s has been down for > %d minutes on %s", td.NodeDownSeverity, node.Url, td.NodeDownMin, cc.ChainId),
+					td.NodeDownSeverity,
 					false,
 					&node.Url,
 				)
@@ -596,7 +597,7 @@ func (cc *ChainConfig) watch() {
 				node.wasDown = false
 				td.alert(
 					cc.name,
-					fmt.Sprintf("RPC node %s has been down for > %d minutes on %s", node.Url, td.NodeDownMin, cc.ChainId),
+					fmt.Sprintf("Severity: %s\nRPC node %s has been down for > %d minutes on %s", td.NodeDownSeverity, node.Url, td.NodeDownMin, cc.ChainId),
 					"info",
 					true,
 					&node.Url,
