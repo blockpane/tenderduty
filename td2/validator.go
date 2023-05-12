@@ -53,30 +53,36 @@ func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 		l(fmt.Sprintf("❌ %s (%s) is INACTIVE", cc.ValAddress, cc.valInfo.Moniker))
 	}
 
-	// need to know the prefix for when we serialize the slashing info query, this is too fragile.
-	// for now, we perform specific chain overrides based on known values because the valoper is used
-	// in so many places.
-	var prefix string
-	split := strings.Split(cc.ValAddress, "valoper")
-	if len(split) != 2 {
-		if pre, ok := altValopers.getAltPrefix(cc.ValAddress); ok {
-			cc.valInfo.Valcons, err = bech32.ConvertAndEncode(pre, cc.valInfo.Conspub[:20])
-			if err != nil {
+	if strings.Contains(cc.ValAddress, "valcons") {
+		// no need to change prefix for signing info query
+		cc.valInfo.Valcons = cc.ValAddress
+	} else {
+		// need to know the prefix for when we serialize the slashing info query, this is too fragile.
+		// for now, we perform specific chain overrides based on known values because the valoper is used
+		// in so many places.
+		var prefix string
+		split := strings.Split(cc.ValAddress, "valoper")
+		if len(split) != 2 {
+			if pre, ok := altValopers.getAltPrefix(cc.ValAddress); ok {
+				cc.valInfo.Valcons, err = bech32.ConvertAndEncode(pre, cc.valInfo.Conspub[:20])
+				if err != nil {
+					return
+				}
+			} else {
+				err = errors.New("❓ could not determine bech32 prefix from valoper address: " + cc.ValAddress)
 				return
 			}
 		} else {
-			err = errors.New("❓ could not determine bech32 prefix from valoper address: " + cc.ValAddress)
-			return
+			prefix = split[0] + "valcons"
+			cc.valInfo.Valcons, err = bech32.ConvertAndEncode(prefix, cc.valInfo.Conspub[:20])
+			if err != nil {
+				return
+			}
 		}
-	} else {
-		prefix = split[0] + "valcons"
-		cc.valInfo.Valcons, err = bech32.ConvertAndEncode(prefix, cc.valInfo.Conspub[:20])
-		if err != nil {
-			return
+		if first {
+			l("⚙️", cc.ValAddress[:20], "... is using consensus key:", cc.valInfo.Valcons)
 		}
-	}
-	if first {
-		l("⚙️", cc.ValAddress[:20], "... is using consensus key:", cc.valInfo.Valcons)
+
 	}
 
 	// get current signing information (tombstoned, missed block count)
