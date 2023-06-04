@@ -79,6 +79,14 @@ chains:
 | `telegram.api_key` | API key ... talk to @BotFather. More setup info in the [telegram doc](telegram.md). |
 | `telegram.channel` | See the [telegram doc](telegram.md) for how to get this value.                      |
 
+## Health Check Settings
+
+| Config Setting          | Description                                                                         |
+|-------------------------|-------------------------------------------------------------------------------------|
+| `healthcheck.enabled`   | Send pings to determine if the monitor is running?                                  |
+| `healthcheck.ping_url`  | URL to send pings to.                                                               |
+| `healthcheck.ping_rate` | Rate in which pings are sent in seconds.                                            |
+
 ## Chain Specific Settings
 
 *This section can be repeated for monitoring multiple chains.*

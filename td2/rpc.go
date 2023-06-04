@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
-	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"time"
+
+	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
+	rpchttp "github.com/tendermint/tendermint/rpc/client/http"
 )
 
 // newRpc sets up the rpc client used for monitoring. It will try nodes in order until a working node is found.
@@ -206,6 +207,28 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 			}
 		}
 	}
+}
+
+func (c *Config) pingHealthcheck() {
+	if !c.Healthcheck.Enabled {
+		return
+	}
+
+	ticker := time.NewTicker(c.Healthcheck.PingRate * time.Second)
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				_, err := http.Get(c.Healthcheck.PingURL)
+				if err != nil {
+					l(fmt.Sprintf("❌ Failed to ping healthcheck URL: %s", err.Error()))
+				} else {
+					l(fmt.Sprintf("🏓 Successfully pinged healthcheck URL: %s", c.Healthcheck.PingURL))
+				}
+			}
+		}
+	}()
 }
 
 // endpointRex matches the first a tag's hostname and port if present.

@@ -94,6 +94,15 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 				}
 			}()
 
+			// tenderduty health checks:
+			if td.Healthcheck.Enabled {
+				go func() {
+					for {
+						td.pingHealthcheck()
+					}
+				}()
+			}
+
 			// websocket subscription and occasional validator info refreshes
 			for {
 				e := cc.newRpc()
