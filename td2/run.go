@@ -80,6 +80,11 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 		}()
 	}
 
+	// tenderduty health checks:
+	if td.Healthcheck.Enabled {
+		td.pingHealthcheck()
+	}
+
 	for k := range td.Chains {
 		cc := td.Chains[k]
 
@@ -93,15 +98,6 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 					cc.monitorHealth(td.ctx, name)
 				}
 			}()
-
-			// tenderduty health checks:
-			if td.Healthcheck.Enabled {
-				go func() {
-					for {
-						td.pingHealthcheck()
-					}
-				}()
-			}
 
 			// websocket subscription and occasional validator info refreshes
 			for {
