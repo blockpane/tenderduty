@@ -80,6 +80,11 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 		}()
 	}
 
+	// tenderduty health checks:
+	if td.Healthcheck.Enabled {
+		td.pingHealthcheck()
+	}
+
 	for k := range td.Chains {
 		cc := td.Chains[k]
 

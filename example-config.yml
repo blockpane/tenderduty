@@ -1,5 +1,4 @@
 ---
-
 # controls whether the dashboard is enabled.
 enable_dashboard: yes
 # What TCP port the dashboard will listen on. Only the port is controllable for now.
@@ -39,7 +38,7 @@ telegram:
   # Alert via telegram? Note: also supersedes chain-specific settings
   enabled: no
   # API key ... talk to @BotFather
-  api_key: '5555555555:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  api_key: "5555555555:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   # The group ID for the chat where messages will be sent. Google how to find this, will include better info later.
   channel: "-666666666"
 
@@ -50,10 +49,18 @@ slack:
   # The webhook can be added in the Slack app directory.
   webhook: https://hooks.slack.com/services/AAAAAAAAAAAAAAAAAAAAAAA/bbbbbbbbbbbbbbbbbbbbbbbb
 
+# Healthcheck settings (dead man's switch)
+healthcheck:
+  # Send pings to determine if the monitor is running?
+  enabled: no
+  # URL to send pings to.
+  ping_url: https://hc-ping.com/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+  # Rate in which pings are sent in seconds.
+  ping_rate: 60
+
 # The various chains to be monitored. Create a new entry for each chain. The name itself can be arbitrary, but a
 # user-friendly name is recommended.
 chains:
-
   # The user-friendly name that will be used for labels. Highly suggest wrapping in quotes.
   "Osmosis":
     # chain_id is validated for a match when connecting to an RPC endpoint, also used as a label in several places.
@@ -115,8 +122,8 @@ chains:
 
       # Slack settings
       slack:
-          enabled: yes
-          webhook: "" # uses default if blank
+        enabled: yes
+        webhook: "" # uses default if blank
 
     # This section covers our RPC providers. No LCD (aka REST) endpoints are used, only TM's RPC endpoints
     # Multiple hosts are encouraged, and will be tried sequentially until a working endpoint is discovered.

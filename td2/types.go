@@ -64,6 +64,8 @@ type Config struct {
 	Telegram TeleConfig `yaml:"telegram"`
 	// Slack webhook information
 	Slack SlackConfig `yaml:"slack"`
+	// Healthcheck information
+	Healthcheck HealthcheckConfig `yaml:"healthcheck"`
 
 	chainsMux sync.RWMutex // prevents concurrent map access for Chains
 	// Chains has settings for each validator to monitor. The map's name does not need to match the chain-id.
@@ -220,6 +222,13 @@ type SlackConfig struct {
 	Enabled  bool     `yaml:"enabled"`
 	Webhook  string   `yaml:"webhook"`
 	Mentions []string `yaml:"mentions"`
+}
+
+// HealthcheckConfig holds the information needed to send pings to a healthcheck endpoint
+type HealthcheckConfig struct {
+	Enabled  bool          `yaml:"enabled"`
+	PingURL  string        `yaml:"ping_url"`
+	PingRate time.Duration `yaml:"ping_rate"`
 }
 
 // validateConfig is a non-exhaustive check for common problems with the configuration. Needs love.
