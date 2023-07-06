@@ -10,7 +10,7 @@ This is a tool for validators running tendermint nodes. It sends notifications w
 - [Configuration File Settings](config.md)
 - [Setting up PagerDuty](pagerduty.md)
 - [Setting up Discord](discord.md)
-- TODO: [Setting up Telegram](telegram.md)
+- [Setting up Telegram](telegram.md)
 - [Prometheus Exports](prometheus.md)
 - [Remotely Configuring Tenderduty](remote.md)
 - [Running on Akash](akash.md)
