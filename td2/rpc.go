@@ -52,7 +52,7 @@ func (cc *ChainConfig) newRpc() error {
 			l(msg)
 			return
 		}
-		if status.SyncInfo.CatchingUp {
+		if status.SyncInfo.CatchingUp || !isLatestBlockTimeCurrent(status.SyncInfo.LatestBlockTime, cc.Alerts.Stalled) {
 			msg = fmt.Sprint("🐢 node is not synced, skipping ", u)
 			syncing = true
 			down = true
@@ -163,7 +163,7 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 						alert("on the wrong network")
 						return
 					}
-					if status.SyncInfo.CatchingUp {
+					if status.SyncInfo.CatchingUp || !isLatestBlockTimeCurrent(status.SyncInfo.LatestBlockTime, cc.Alerts.Stalled) {
 						alert("not synced")
 						node.syncing = true
 						return
@@ -182,7 +182,6 @@ func (cc *ChainConfig) monitorHealth(ctx context.Context, chainName string) {
 					l(fmt.Sprintf("🟢 %-12s node %s is healthy", chainName, node.Url))
 				}(node)
 			}
-
 			if cc.client == nil {
 				e := cc.newRpc()
 				if e != nil {
@@ -260,4 +259,9 @@ func guessPublicEndpoint(u string) string {
 		port = matches[2]
 	}
 	return proto + matches[1] + port
+}
+
+// isLatestBlockTimeCurrent checks to see if the `latest_block_time` is within stalledMinutes minutes of UTC time.
+func isLatestBlockTimeCurrent(blockTime time.Time, stalledMinutes int) bool {
+	return time.Now().UTC().Sub(blockTime) < time.Minute*time.Duration(stalledMinutes)
 }
