@@ -272,7 +272,18 @@ func guessPublicEndpoint(u string) string {
 }
 
 func getStatusWithEndpoint(ctx context.Context, u string) (string, bool, error) {
-	queryPath := fmt.Sprintf("%s/status", u)
+	// Parse the URL
+	parsedURL, err := url.Parse(u)
+	if err != nil {
+		return "", false, err
+	}
+
+	// Check if the scheme is 'tcp' and modify to 'http'
+	if parsedURL.Scheme == "tcp" {
+		parsedURL.Scheme = "http"
+	}
+
+	queryPath := fmt.Sprintf("%s/status", parsedURL.String())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, queryPath, nil)
 	if err != nil {
 		return "", false, err
