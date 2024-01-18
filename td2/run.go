@@ -29,6 +29,11 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 	}
 	log.Println("tenderduty config is valid, starting tenderduty with", len(td.Chains), "chains")
 
+	err = SendStartupAlert(td)
+	if err != nil {
+		log.Printf("Failed to send startup alert: %v", err)
+	}
+
 	defer td.cancel()
 
 	go func() {

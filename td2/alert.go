@@ -618,3 +618,36 @@ func (cc *ChainConfig) watch() {
 		}
 	}
 }
+
+// SendStartupAlert sends a notification to all configured alert channels upon service startup
+func SendStartupAlert(cfg *Config) error {
+    message := "Startup alert: TenderDuty service has started successfully and all notification channels are being tested."
+    var sendError error
+
+    if cfg.Discord.Enabled {
+        err := notifyDiscord(&alertMsg{disc: true, chain: "TenderDuty", message: message})
+        if err != nil {
+            sendError = fmt.Errorf("Discord: %v", err)
+        }
+    }
+    if cfg.Telegram.Enabled {
+        err := notifyTg(&alertMsg{tg: true, chain: "TenderDuty", message: message, tgKey: cfg.Telegram.ApiKey, tgChannel: cfg.Telegram.Channel})
+        if err != nil {
+            sendError = fmt.Errorf("%v\nTelegram: %v", sendError, err)
+        }
+    }
+    if cfg.Slack.Enabled {
+        err := notifySlack(&alertMsg{slk: true, chain: "TenderDuty", message: message, slkHook: cfg.Slack.Webhook})
+        if err != nil {
+            sendError = fmt.Errorf("%v\nSlack: %v", sendError, err)
+        }
+    }
+    if cfg.Pagerduty.Enabled {
+        err := notifyPagerduty(&alertMsg{pd: true, chain: "TenderDuty", message: message, key: cfg.Pagerduty.ApiKey})
+        if err != nil {
+            sendError = fmt.Errorf("%v\nPagerDuty: %v", sendError, err)
+        }
+    }
+
+    return sendError
+}
