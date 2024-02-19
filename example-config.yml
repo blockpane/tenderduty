@@ -67,7 +67,7 @@ chains:
     chain_id: osmosis-1
     # Hooray, in v2 we derive the valcons from abci queries so you don't have to jump through hoops to figure out how
     # to convert ed25519 keys to the appropriate bech32 address.
-    # Use valcons address if using ICS
+    # Use valcons address if using ICS or tendermint/PubKeyBn254
     valoper_address: osmovaloper1xxxxxxx...
     # Should the monitor revert to using public API endpoints if all supplied RCP nodes fail?
     # This isn't always reliable, not all public nodes have websocket proxying setup correctly.
