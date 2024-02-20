@@ -23,6 +23,7 @@ func (cc *ChainConfig) newRpc() error {
 	for _, endpoint := range cc.Nodes {
 		anyWorking = anyWorking || !endpoint.down
 	}
+
 	// grab the first working endpoint
 	tryUrl := func(u string) (msg string, down, syncing bool) {
 		_, err := url.Parse(u)
@@ -97,21 +98,22 @@ func (cc *ChainConfig) newRpc() error {
 	cc.lastError = "no usable RPC endpoints available for " + cc.ChainId
 	if td.EnableDash {
 		td.updateChan <- &dash.ChainStatus{
-			MsgType:      "status",
-			Name:         cc.name,
-			ChainId:      cc.ChainId,
-			Moniker:      cc.valInfo.Moniker,
-			Bonded:       cc.valInfo.Bonded,
-			Jailed:       cc.valInfo.Jailed,
-			Tombstoned:   cc.valInfo.Tombstoned,
-			Missed:       cc.valInfo.Missed,
-			Window:       cc.valInfo.Window,
-			Nodes:        len(cc.Nodes),
-			HealthyNodes: 0,
-			ActiveAlerts: 1,
-			Height:       0,
-			LastError:    cc.lastError,
-			Blocks:       cc.blocksResults,
+			MsgType:            "status",
+			Name:               cc.name,
+			ChainId:            cc.ChainId,
+			Moniker:            cc.valInfo.Moniker,
+			Bonded:             cc.valInfo.Bonded,
+			Jailed:             cc.valInfo.Jailed,
+			Tombstoned:         cc.valInfo.Tombstoned,
+			Missed:             cc.valInfo.Missed,
+			Window:             cc.valInfo.Window,
+			MinSignedPerWindow: cc.minSignedPerWindow,
+			Nodes:              len(cc.Nodes),
+			HealthyNodes:       0,
+			ActiveAlerts:       1,
+			Height:             0,
+			LastError:          cc.lastError,
+			Blocks:             cc.blocksResults,
 		}
 	}
 	return errors.New("no usable endpoints available for " + cc.ChainId)

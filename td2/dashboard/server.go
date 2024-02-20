@@ -3,8 +3,6 @@ package dash
 import (
 	"embed"
 	"encoding/json"
-	"github.com/gorilla/websocket"
-	"github.com/textileio/go-threads/broadcast"
 	"io/fs"
 	"log"
 	"net/http"
@@ -12,6 +10,9 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/textileio/go-threads/broadcast"
 )
 
 var (
