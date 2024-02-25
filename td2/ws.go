@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
-	"github.com/gorilla/websocket"
-	pbtypes "github.com/tendermint/tendermint/proto/tendermint/types"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	dash "github.com/blockpane/tenderduty/v2/td2/dashboard"
+	"github.com/gorilla/websocket"
+	pbtypes "github.com/tendermint/tendermint/proto/tendermint/types"
 )
 
 const (
@@ -129,6 +130,7 @@ func (cc *ChainConfig) WsRun() {
 						cc.lastError = time.Now().UTC().String() + " " + info
 						l(warn)
 					}
+
 					switch signState {
 					case Statusmissed:
 						cc.statTotalMiss += 1
@@ -164,24 +166,26 @@ func (cc *ChainConfig) WsRun() {
 					case cc.valInfo.Jailed:
 						info += "- validator is jailed\n"
 					}
+
 					cc.activeAlerts = alarms.getCount(cc.name)
 					if td.EnableDash {
 						td.updateChan <- &dash.ChainStatus{
-							MsgType:      "status",
-							Name:         cc.name,
-							ChainId:      cc.ChainId,
-							Moniker:      cc.valInfo.Moniker,
-							Bonded:       cc.valInfo.Bonded,
-							Jailed:       cc.valInfo.Jailed,
-							Tombstoned:   cc.valInfo.Tombstoned,
-							Missed:       cc.valInfo.Missed,
-							Window:       cc.valInfo.Window,
-							Nodes:        len(cc.Nodes),
-							HealthyNodes: healthyNodes,
-							ActiveAlerts: cc.activeAlerts,
-							Height:       update.Height,
-							LastError:    info,
-							Blocks:       cc.blocksResults,
+							MsgType:            "status",
+							Name:               cc.name,
+							ChainId:            cc.ChainId,
+							Moniker:            cc.valInfo.Moniker,
+							Bonded:             cc.valInfo.Bonded,
+							Jailed:             cc.valInfo.Jailed,
+							Tombstoned:         cc.valInfo.Tombstoned,
+							Missed:             cc.valInfo.Missed,
+							Window:             cc.valInfo.Window,
+							MinSignedPerWindow: cc.minSignedPerWindow,
+							Nodes:              len(cc.Nodes),
+							HealthyNodes:       healthyNodes,
+							ActiveAlerts:       cc.activeAlerts,
+							Height:             update.Height,
+							LastError:          info,
+							Blocks:             cc.blocksResults,
 						}
 					}
 

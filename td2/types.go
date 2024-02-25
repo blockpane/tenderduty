@@ -83,18 +83,19 @@ type savedState struct {
 // ChainConfig represents a validator to be monitored on a chain, it is somewhat of a misnomer since multiple
 // validators can be monitored on a single chain.
 type ChainConfig struct {
-	name           string
-	wsclient       *TmConn       // custom websocket client to work around wss:// bugs in tendermint
-	client         *rpchttp.HTTP // legit tendermint client
-	noNodes        bool          // tracks if all nodes are down
-	valInfo        *ValInfo      // recent validator state, only refreshed every few minutes
-	lastValInfo    *ValInfo      // use for detecting newly-jailed/tombstone
-	blocksResults  []int
-	lastError      string
-	lastBlockTime  time.Time
-	lastBlockAlarm bool
-	lastBlockNum   int64
-	activeAlerts   int
+	name               string
+	wsclient           *TmConn       // custom websocket client to work around wss:// bugs in tendermint
+	client             *rpchttp.HTTP // legit tendermint client
+	noNodes            bool          // tracks if all nodes are down
+	valInfo            *ValInfo      // recent validator state, only refreshed every few minutes
+	lastValInfo        *ValInfo      // use for detecting newly-jailed/tombstone
+	minSignedPerWindow float64       // instantly see the validator risk level
+	blocksResults      []int
+	lastError          string
+	lastBlockTime      time.Time
+	lastBlockAlarm     bool
+	lastBlockNum       int64
+	activeAlerts       int
 
 	statTotalSigns      float64
 	statTotalProps      float64
@@ -326,19 +327,20 @@ func validateConfig(c *Config) (fatal bool, problems []string) {
 		}
 		if td.EnableDash {
 			td.updateChan <- &dash.ChainStatus{
-				MsgType:      "status",
-				Name:         v.name,
-				ChainId:      v.ChainId,
-				Moniker:      v.valInfo.Moniker,
-				Bonded:       v.valInfo.Bonded,
-				Jailed:       v.valInfo.Jailed,
-				Tombstoned:   v.valInfo.Tombstoned,
-				Missed:       v.valInfo.Missed,
-				Window:       v.valInfo.Window,
-				Nodes:        len(v.Nodes),
-				HealthyNodes: 0,
-				ActiveAlerts: 0,
-				Blocks:       v.blocksResults,
+				MsgType:            "status",
+				Name:               v.name,
+				ChainId:            v.ChainId,
+				Moniker:            v.valInfo.Moniker,
+				Bonded:             v.valInfo.Bonded,
+				Jailed:             v.valInfo.Jailed,
+				Tombstoned:         v.valInfo.Tombstoned,
+				Missed:             v.valInfo.Missed,
+				MinSignedPerWindow: v.minSignedPerWindow,
+				Window:             v.valInfo.Window,
+				Nodes:              len(v.Nodes),
+				HealthyNodes:       0,
+				ActiveAlerts:       0,
+				Blocks:             v.blocksResults,
 			}
 		}
 	}

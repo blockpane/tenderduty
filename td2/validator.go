@@ -28,6 +28,37 @@ type ValInfo struct {
 	Valcons    string `json:"valcons"`
 }
 
+// GetMinSignedPerWindow The check the minimum signed threshold of the validator.
+func (cc *ChainConfig) GetMinSignedPerWindow() (err error) {
+	if cc.client == nil {
+		return errors.New("nil rpc client")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	qParams := &slashing.QueryParamsRequest{}
+	b, err := qParams.Marshal()
+	if err != nil {
+		return
+	}
+	resp, err := cc.client.ABCIQuery(ctx, "/cosmos.slashing.v1beta1.Query/Params", b)
+	if err != nil {
+		return
+	}
+	if resp.Response.Value == nil {
+		err = errors.New("🛑 could not query slashing params, got empty response")
+		return
+	}
+	params := &slashing.QueryParamsResponse{}
+	err = params.Unmarshal(resp.Response.Value)
+	if err != nil {
+		return
+	}
+
+	cc.minSignedPerWindow = params.Params.MinSignedPerWindow.MustFloat64()
+	return
+}
+
 // GetValInfo the first bool is used to determine if extra information about the validator should be printed.
 func (cc *ChainConfig) GetValInfo(first bool) (err error) {
 	if cc.client == nil {
