@@ -28,6 +28,7 @@ type ValInfo struct {
 	Valcons    string `json:"valcons"`
 }
 
+// GetMinSignedPerWindow The check the minimum signed threshold of the validator.
 func (cc *ChainConfig) GetMinSignedPerWindow() (err error) {
 	if cc.client == nil {
 		return errors.New("nil rpc client")
