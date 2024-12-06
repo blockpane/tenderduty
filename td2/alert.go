@@ -396,7 +396,7 @@ func (c *Config) alert(chainName, message, severity string, resolved bool, id *s
 // and also updates a few prometheus stats
 // FIXME: not watching for nodes that are lagging the head block!
 func (cc *ChainConfig) watch() {
-	var missedAlarm, pctAlarm, noNodes bool
+	var missedAlarm, pctAlarm, noNodes, emptyBlocksAlarm, emptyPctAlarm bool
 	inactive := "jailed"
 	nodeAlarms := make(map[string]bool)
 
@@ -502,7 +502,7 @@ func (cc *ChainConfig) watch() {
 				}
 				td.alert(
 					cc.name,
-					fmt.Sprintf("%s is no longer active: validator is %s", cc.valInfo.Moniker, inactive),
+					fmt.Sprintf("%s is no longer active: validator %s is %s for chainid %s", cc.valInfo.Moniker, cc.ValAddress, inactive, cc.ChainId),
 					"critical",
 					false,
 					&id,
@@ -510,7 +510,7 @@ func (cc *ChainConfig) watch() {
 			} else if cc.valInfo.Bonded && !cc.lastValInfo.Bonded {
 				td.alert(
 					cc.name,
-					fmt.Sprintf("%s is no longer active: validator is %s", cc.valInfo.Moniker, inactive),
+					fmt.Sprintf("%s is no longer active: validator %s is %s for chainid %s", cc.valInfo.Moniker, cc.ValAddress, inactive, cc.ChainId),
 					"info",
 					true,
 					&id,
@@ -566,7 +566,76 @@ func (cc *ChainConfig) watch() {
 				cc.name,
 				fmt.Sprintf("%s has missed > %d%% of the slashing window's blocks on %s", cc.valInfo.Moniker, cc.Alerts.Window, cc.ChainId),
 				"info",
+				true,
+				&id,
+			)
+			cc.activeAlerts = alarms.getCount(cc.name)
+		}
+
+		// empty blocks alarm handling
+		if !emptyBlocksAlarm && cc.Alerts.ConsecutiveEmptyAlerts && int(cc.statConsecutiveEmpty) >= cc.Alerts.ConsecutiveEmpty {
+			// alert on empty blocks counter!
+			emptyBlocksAlarm = true
+			id := cc.valInfo.Valcons + "empty"
+			td.alert(
+				cc.name,
+				fmt.Sprintf("%s has proposed %d consecutive empty blocks on %s", cc.valInfo.Moniker, cc.Alerts.ConsecutiveEmpty, cc.ChainId),
+				cc.Alerts.ConsecutiveEmptyPriority,
 				false,
+				&id,
+			)
+			cc.activeAlerts = alarms.getCount(cc.name)
+		} else if emptyBlocksAlarm && int(cc.statConsecutiveEmpty) < cc.Alerts.ConsecutiveEmpty {
+			// clear the alert
+			emptyBlocksAlarm = false
+			id := cc.valInfo.Valcons + "empty"
+			td.alert(
+				cc.name,
+				fmt.Sprintf("%s has proposed %d consecutive empty blocks on %s", cc.valInfo.Moniker, cc.Alerts.ConsecutiveEmpty, cc.ChainId),
+				"info",
+				true,
+				&id,
+			)
+			cc.activeAlerts = alarms.getCount(cc.name)
+		}
+
+		// window percentage empty block alarms
+		var emptyBlocksPercent float64
+		if cc.statTotalProps > 0 {
+			emptyBlocksPercent = 100 * float64(cc.statTotalPropsEmpty) / float64(cc.statTotalProps)
+		}
+
+		if cc.Alerts.EmptyPercentageAlerts && !emptyPctAlarm && emptyBlocksPercent > float64(cc.Alerts.EmptyWindow) {
+			// alert on empty block percentage!
+			emptyPctAlarm = true
+			id := cc.valInfo.Valcons + "empty_percent"
+			td.alert(
+				cc.name,
+				fmt.Sprintf("%s has > %d%% empty blocks (%d of %d proposed blocks) on %s", 
+					cc.valInfo.Moniker, 
+					cc.Alerts.EmptyWindow,
+					int(cc.statTotalPropsEmpty),
+					int(cc.statTotalProps),
+					cc.ChainId),
+				cc.Alerts.EmptyPercentagePriority,
+				false,
+				&id,
+			)
+			cc.activeAlerts = alarms.getCount(cc.name)
+		} else if cc.Alerts.EmptyPercentageAlerts && emptyPctAlarm && emptyBlocksPercent < float64(cc.Alerts.EmptyWindow) {
+			// clear the alert
+			emptyPctAlarm = false
+			id := cc.valInfo.Valcons + "empty_percent"
+			td.alert(
+				cc.name,
+				fmt.Sprintf("%s has > %d%% empty blocks (%d of %d proposed blocks) on %s", 
+					cc.valInfo.Moniker, 
+					cc.Alerts.EmptyWindow,
+					int(cc.statTotalPropsEmpty),
+					int(cc.statTotalProps),
+					cc.ChainId),
+				"info",
+				true,
 				&id,
 			)
 			cc.activeAlerts = alarms.getCount(cc.name)

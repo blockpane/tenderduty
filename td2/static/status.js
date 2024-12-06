@@ -107,6 +107,9 @@ function updateTable(status) {
             window += `${(100 - (status.Status[i].missed / status.Status[i].window) * 100).toFixed(2)}%</div>`
         }
         window += `<div class="uk-width-1-2">${_.escape(status.Status[i].missed)} / ${_.escape(status.Status[i].window)}</div>`
+        
+        let threshold = ""
+        threshold += `<span class="uk-width-1-2">${100 * status.Status[i].min_signed_per_window}%</span>`;
 
         let nodes = `${_.escape(status.Status[i].healthy_nodes)} / ${_.escape(status.Status[i].nodes)}`
         if (status.Status[i].healthy_nodes < status.Status[i].nodes) {
@@ -131,7 +134,8 @@ function updateTable(status) {
         }
         r.insertCell(4).innerHTML = `<div style="text-align: center">${bonded}</div>`
         r.insertCell(5).innerHTML = `<div uk-grid>${window}</div>`
-        r.insertCell(6).innerHTML = `<div class="uk-text-center">${nodes}</div>`
+        r.insertCell(6).innerHTML = `<div class="uk-text-center">${threshold}</div>`
+        r.insertCell(7).innerHTML = `<div class="uk-text-center">${nodes}</div>`
     }
 }
 

@@ -36,6 +36,7 @@ services:
     volumes:
       - home:/var/lib/tenderduty
       - ./config.yml:/var/lib/tenderduty/config.yml
+      - ./chains.d:/var/lib/tenderduty/chains.d/
     logging:
       driver: "json-file"
       options:

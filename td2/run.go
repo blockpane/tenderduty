@@ -107,6 +107,12 @@ func Run(configFile, stateFile, chainConfigDirectory string, password *string) e
 					time.Sleep(5 * time.Second)
 					continue
 				}
+
+				e = cc.GetMinSignedPerWindow()
+				if e != nil {
+					l("🛑", cc.ChainId, e)
+				}
+
 				e = cc.GetValInfo(true)
 				if e != nil {
 					l("🛑", cc.ChainId, e)

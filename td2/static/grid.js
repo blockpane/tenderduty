@@ -73,6 +73,17 @@ function legend() {
 
     offset += 65 * scale
     grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
+    grad.addColorStop(0, 'rgb(255,215,0)');
+    grad.addColorStop(0.3, 'rgb(255,235,100)');
+    grad.addColorStop(0.8, 'rgb(255,223,66)');
+    ctx.fillStyle = grad
+    ctx.fillRect(offset, 0, gridW, gridH)
+    ctx.fillStyle = 'grey'
+    offset += gridW + gridW/2
+    ctx.fillText("proposer/empty",offset, gridH/1.2)
+
+    offset += 110 * scale
+    grad = ctx.createLinearGradient(offset, 0, offset+gridW, gridH)
     grad.addColorStop(0, 'rgba(0,0,0,0.2)');
     ctx.fillStyle = grad
     ctx.fillRect(offset, 0, gridW, gridH)
@@ -148,6 +159,11 @@ function drawSeries(multiStates) {
                 crossThrough = false
                 const grad = ctx.createLinearGradient((i*gridW)+gridTextW, (gridH*j), (i * gridW) + gridW +gridTextW, (gridH*j))
                 switch (multiStates.Status[j].blocks[i]) {
+                    case 5: // empty proposed
+                        grad.addColorStop(0, 'rgb(255,215,0)');
+                        grad.addColorStop(0.3, 'rgb(255,235,100)');
+                        grad.addColorStop(0.8, 'rgb(255,223,66)');
+                        break
                     case 4: // proposed
                         grad.addColorStop(0, 'rgb(123,255,66)');
                         grad.addColorStop(0.3, 'rgb(240,255,128)');

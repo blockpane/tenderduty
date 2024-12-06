@@ -3,13 +3,14 @@ package tenderduty
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -25,6 +26,8 @@ const (
 	metricPrevote
 	metricPrecommit
 	metricConsecutive
+	metricEmptyBlocks
+	metricConsecutiveEmpty
 	metricWindowMissed
 	metricWindowSize
 	metricLastBlockSeconds
@@ -91,6 +94,14 @@ func prometheusExporter(ctx context.Context, updates chan *promUpdate) {
 		Name: "tenderduty_consecutive_missed_blocks",
 		Help: "the current count of consecutively missed blocks regardless of precommit or prevote status",
 	}, chainLabels)
+	emptyBlocks := promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tenderduty_empty_proposed_blocks",
+		Help: "count of empty blocks proposed (blocks with zero transactions) since tenderduty was started",
+	}, chainLabels)
+	consecutiveEmpty := promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "tenderduty_consecutive_empty_blocks",
+		Help: "the current count of consecutively proposed empty blocks",
+	}, chainLabels)
 	windowSize := promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "tenderduty_missed_block_window",
 		Help: "the missed block aka slashing window",
@@ -135,6 +146,8 @@ func prometheusExporter(ctx context.Context, updates chan *promUpdate) {
 		metricPrevote:                  missedPrevote,
 		metricPrecommit:                missedPrecommit,
 		metricConsecutive:              missedConsecutive,
+		metricEmptyBlocks:              emptyBlocks,
+		metricConsecutiveEmpty:         consecutiveEmpty,
 		metricWindowMissed:             missedWindow,
 		metricWindowSize:               windowSize,
 		metricLastBlockSeconds:         lastBlockSec,
@@ -158,7 +171,7 @@ func prometheusExporter(ctx context.Context, updates chan *promUpdate) {
 
 	promMux := http.NewServeMux()
 
-	l("serving prometheus metrics at 0.0.0.0:%d/metrics", td.PrometheusListenPort)
+	l(fmt.Sprintf("📊 Serving prometheus metrics at 0.0.0.0:%d/metrics", td.PrometheusListenPort))
 	promMux.Handle("/metrics", promhttp.Handler())
 	promSrv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", td.PrometheusListenPort),

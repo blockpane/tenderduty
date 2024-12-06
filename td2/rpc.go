@@ -2,6 +2,7 @@ package tenderduty
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +24,7 @@ func (cc *ChainConfig) newRpc() error {
 	for _, endpoint := range cc.Nodes {
 		anyWorking = anyWorking || !endpoint.down
 	}
+
 	// grab the first working endpoint
 	tryUrl := func(u string) (msg string, down, syncing bool) {
 		_, err := url.Parse(u)
@@ -39,20 +41,28 @@ func (cc *ChainConfig) newRpc() error {
 			down = true
 			return
 		}
+		var network string
+		var catching_up bool
 		status, err := cc.client.Status(ctx)
 		if err != nil {
-			msg = fmt.Sprintf("❌ could not get status for %s: (%s) %s", cc.name, u, err)
+			n, c, err := getStatusWithEndpoint(ctx, u)
+			if err != nil {
+				msg = fmt.Sprintf("❌ could not get status for %s: (%s) %s", cc.name, u, err)
+				down = true
+				l(msg)
+				return
+			}
+			network, catching_up = n, c
+		} else {
+			network, catching_up = status.NodeInfo.Network, status.SyncInfo.CatchingUp
+		}
+		if network != cc.ChainId {
+			msg = fmt.Sprintf("chain id %s on %s does not match, expected %s, skipping", network, u, cc.ChainId)
 			down = true
 			l(msg)
 			return
 		}
-		if status.NodeInfo.Network != cc.ChainId {
-			msg = fmt.Sprintf("chain id %s on %s does not match, expected %s, skipping", status.NodeInfo.Network, u, cc.ChainId)
-			down = true
-			l(msg)
-			return
-		}
-		if status.SyncInfo.CatchingUp {
+		if catching_up {
 			msg = fmt.Sprint("🐢 node is not synced, skipping ", u)
 			syncing = true
 			down = true
@@ -97,21 +107,22 @@ func (cc *ChainConfig) newRpc() error {
 	cc.lastError = "no usable RPC endpoints available for " + cc.ChainId
 	if td.EnableDash {
 		td.updateChan <- &dash.ChainStatus{
-			MsgType:      "status",
-			Name:         cc.name,
-			ChainId:      cc.ChainId,
-			Moniker:      cc.valInfo.Moniker,
-			Bonded:       cc.valInfo.Bonded,
-			Jailed:       cc.valInfo.Jailed,
-			Tombstoned:   cc.valInfo.Tombstoned,
-			Missed:       cc.valInfo.Missed,
-			Window:       cc.valInfo.Window,
-			Nodes:        len(cc.Nodes),
-			HealthyNodes: 0,
-			ActiveAlerts: 1,
-			Height:       0,
-			LastError:    cc.lastError,
-			Blocks:       cc.blocksResults,
+			MsgType:            "status",
+			Name:               cc.name,
+			ChainId:            cc.ChainId,
+			Moniker:            cc.valInfo.Moniker,
+			Bonded:             cc.valInfo.Bonded,
+			Jailed:             cc.valInfo.Jailed,
+			Tombstoned:         cc.valInfo.Tombstoned,
+			Missed:             cc.valInfo.Missed,
+			Window:             cc.valInfo.Window,
+			MinSignedPerWindow: cc.minSignedPerWindow,
+			Nodes:              len(cc.Nodes),
+			HealthyNodes:       0,
+			ActiveAlerts:       1,
+			Height:             0,
+			LastError:          cc.lastError,
+			Blocks:             cc.blocksResults,
 		}
 	}
 	return errors.New("no usable endpoints available for " + cc.ChainId)
@@ -260,4 +271,52 @@ func guessPublicEndpoint(u string) string {
 		port = matches[2]
 	}
 	return proto + matches[1] + port
+}
+
+func getStatusWithEndpoint(ctx context.Context, u string) (string, bool, error) {
+	// Parse the URL
+	parsedURL, err := url.Parse(u)
+	if err != nil {
+		return "", false, err
+	}
+
+	// Check if the scheme is 'tcp' and modify to 'http'
+	if parsedURL.Scheme == "tcp" {
+		parsedURL.Scheme = "http"
+	}
+
+	queryPath := fmt.Sprintf("%s/status", parsedURL.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, queryPath, nil)
+	if err != nil {
+		return "", false, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", false, err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", false, err
+	}
+
+	type tendermintStatus struct {
+		JsonRPC string `json:"jsonrpc"`
+		ID      int    `json:"id"`
+		Result  struct {
+			NodeInfo struct {
+				Network string `json:"network"`
+			} `json:"node_info"`
+			SyncInfo struct {
+				CatchingUp bool `json:"catching_up"`
+			} `json:"sync_info"`
+		} `json:"result"`
+	}
+	var status tendermintStatus
+	if err := json.Unmarshal(b, &status); err != nil {
+		return "", false, err
+	}
+	return status.Result.NodeInfo.Network, status.Result.SyncInfo.CatchingUp, nil
 }

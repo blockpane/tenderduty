@@ -1,5 +1,5 @@
 # 1st stage, build app
-FROM golang:1.19 as builder
+FROM golang:1.20.6-bullseye as builder
 RUN apt-get update && apt-get -y upgrade && apt-get install -y upx
 COPY . /build/app
 WORKDIR /build/app
